@@ -1577,25 +1577,25 @@ function runPipelineForEntry(entry, tonic, m){
 // -------------------- Sample / Random --------------------
 const sample = `**kern\t**fb\t**text\t**text
 !!\t\tactual acc.\tforce diatonic accidental
-!! Dir\tDescending Minor
-!! Title\tRule of the Octave
-!! Number\t4
-*clefF4\t*\t*\t*
-*k[]\t*k[]\t*k[]\t*k:
-*a:\t*a:\t*a:\t*a:
-=1\t=1\t.\t.
-4AA\t5\t.\t.
-4BB\t7\t.\t.
-4C\t6\t.\t.
-4D\t9\t.\t.
-.\t8\t.\t.
-4E\t6 4\t.\t.
-.\t5 #\t.\t.
-4F#\t6\t.\t.
-4G#\t6 5\t.\t.
-4A\t.\t.\t.
-=|\t=|\t.\t.
-*-\t*-\t*-\t*-`;
+!! Title	1. D minor
+!! Number	1A
+*clefF4	*	*	*
+*k[b-]	*k[b-]	*k[b-]	*k[b-]
+*met(c)	*met(c)	*met(c)	*met(c)
+*d:	*d:	*d:	*d:
+=1	=1	=1	=1
+4D	.	.	.
+4d[	.	.	.
+4d]	2	.	.
+4c#	.	6	.
+=|2	=|2	=|2	=|2
+4d	.	.	.
+4A	6	.	.
+4B-	.	.	.
+4G	- 6	6 -	.
+=|	=|	=|	=|
+4A	#	.	.
+*-	*-	*-	*-
 
 // -------------------- Enharmonic toggle sets --------------------
 const ENH_MAJOR_PAIRS = [['C#','Db'], ['F#','Gb']];
@@ -1922,4 +1922,5 @@ if (!currentKrn) {
 </script>
 </body>
 </html>
+
 
