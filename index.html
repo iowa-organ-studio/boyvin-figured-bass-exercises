@@ -1577,25 +1577,18 @@ function runPipelineForEntry(entry, tonic, m){
 // -------------------- Sample / Random --------------------
 const sample = `**kern\t**fb\t**text\t**text
 !!\t\tactual acc.\tforce diatonic accidental
-!! Title\t1. D minor
-!! Number\t1A
+!! Dir\tDescending Minor
+!! Title\tRule of the Octave
+!! Number\t4
 *clefF4\t*\t*\t*
-*k[b-]\t*k[b-]\t*k[b-]\t*k[b-]
-*met(c)\t*met(c)\t*met(c)\t*met(c)
-*d:\t*d:\t*d:\t*d:
-=1\t=1\t=1\t=1
+*k[]\t*k[]\t*k[]\t*k:
+*a:\t*a:\t*a:\t*a:
+=1\t=1\t.\t.
 4D\t.\t.\t.
 4d[\t.\t.\t.
 4d]\t2\t.\t.
-4c#\t.\t6\t.
-=|2\t=|2\t=|2\t=|2
-4d\t.\t.\t.
-4A\t6\t.\t.
-4B-\t.\t.\t.
-4G\t- 6\t6 -\t.
-=|\t=|\t=|\t=|
-4A\t#\t.\t.
-*-\t*-\t*-\t*-
+4c#\t.\t.\t.
+*-\t*-\t*-\t*-`;
 
 // -------------------- Enharmonic toggle sets --------------------
 const ENH_MAJOR_PAIRS = [['C#','Db'], ['F#','Gb']];
@@ -1922,6 +1915,3 @@ if (!currentKrn) {
 </script>
 </body>
 </html>
-
-
-
