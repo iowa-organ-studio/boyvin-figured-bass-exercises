@@ -1,0 +1,21 @@
+**kern	**fb	**text	**text
+!!		actual acc.	force diatonic accidental
+!! Title	1. D minor
+!! Number	1K
+*clefF4	*	*	*
+*k[b-]	*k[b-]	*k[b-]	*k[b-]
+*met(c)	*met(c)	*met(c)	*met(c)
+*d:	*d:	*d:	*d:
+=1	=1	=1	=1
+r4	.	6	.
+4FF	.	.	.
+2GG	7 9	9 7	.
+.	6 8	8 6	.
+=1	=1	=1	=1
+1AA	# 7	7 #	.
+.	4 6	6 4	.
+.	4 5	5 4	.
+.	#	.	.
+1DD	.	.	.
+=1	=1	=1	=1
+*-	*-	*-	*-
