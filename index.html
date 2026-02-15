@@ -1,4 +1,5 @@
 
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -111,7 +112,7 @@ header {
   max-height: 66px;
   height: auto;
   display: block;
-  margin: 6px 0 0 0;
+  margin: 2px 0 0 0;
 }
 
 /* Hidden accessibility helper for historical status */
@@ -213,6 +214,29 @@ header {
   font-size: 0.95rem;
 }
 
+/* Tighter vertical padding inside the music viewer card */
+#viewer.card {
+  padding-top: 6px;    /* was 10px via .card */
+  padding-bottom: 6px; /* was 10px via .card */
+}
+
+/* Optional: remove the extra top margin above the viewer card */
+#viewer { margin-top: 4px; }  /* was 8px */
+
+/* === Verovio fit-to-viewer helpers === */
+#viewer { 
+  overflow-x: hidden;           /* avoid horizontal scrolling bars */
+  overflow-y: hidden;     /* no vertical scrollbar */
+}
+#svg { display: block; }
+#svg svg {
+  display: block;               /* render as block to measure width/height cleanly */
+  width: auto;                  /* allow intrinsic width so we can measure it */
+  height: auto;
+  margin: 0;
+}
+
+
 /* ======= Logo ======= */
 #logoAfterFilters img {
   max-width: 66%;
@@ -242,7 +266,7 @@ header {
   <!-- ===== Row 2: Music viewer ===== -->
   <div id="viewer" class="card" style="margin-top:8px">
     <div id="svg">Waiting for Verovio…</div>
-    <div id="modeTagline" class="small" style="margin-top:8px">
+    <div id="modeTagline" class="small">
       <!-- CHANGE #1: move Boyvin png to tagline -->
       <img class="tagline-img" src="boyvinsignature.png" alt="Boyvin signature">
       <span id="historicalStatus" class="visually-hidden"></span>
@@ -289,7 +313,7 @@ header {
       <button class="btn" id="spacingPlus">+</button>
       <div class="small-pill" id="spacingValue">0.32</div>
       <!-- Keep slider in DOM for JS; hidden with CSS -->
-      <div class="slider" aria-hidden="true"><input id="spacingSlider" type="range" min="10" max="80" value="32"></div>
+      <div class="slider" aria-hidden="true"><input id="spacingSlider" type="range" min="10" max="120" value="32"></div>
     </div>
   </div>
 
@@ -727,7 +751,30 @@ function diatonicSpelling(tonicStr, mode, bassSpelled, numeral){
 
 // Verovio toolkit
 let vrv;
-const baseOptions = { scale:50, pageWidth:1200, adjustPageHeight:true, spacingLinear:0.32, spacingNonLinear:0.46 };
+// Tighter default layout with smaller page margins
+const baseOptions = {
+  scale: 50,
+
+  // pageWidth is set by the fit-to-viewer loop you added;
+  // keep a sensible default but it will be overwritten each render.
+  pageWidth: 900,
+
+  adjustPageHeight: true,
+
+  // Reduce the white space inside the SVG
+  pageMarginTop: 8,       // was Verovio default (~18)
+  pageMarginBottom: 10,   // was Verovio default (~18)
+  pageMarginLeft: 12,
+  pageMarginRight: 12,
+
+  // Slightly tighter system and staff spacing (optional)
+  spacingSystem: 9,       // default often ~10
+  spacingStaff: 8,        // default often ~8
+
+  // Your existing spacing values
+  spacingLinear: 0.32,
+  spacingNonLinear: 0.46
+};
 
 // -------------------- Verovio init --------------------
 async function waitForVerovioGlobal(timeout = 10000) {
@@ -1554,42 +1601,138 @@ function tonicToVerovioAscii(tonic) {
     .replace(/\u266d/g, 'b')
     .replace(/\u266f/g, '#');
 }
+
+
+/* ====== Fit-to-viewer utilities (Humdrum) ====== */
+let lastGoodPageWidth = null;
+let lastRenderReason = "init";
+
+/* Measure the available pixel width inside #viewer (with a floor) */
+function viewerAvailableWidth(){
+  const el = document.getElementById('viewer');
+  if (!el) return 800;
+  const rect = el.getBoundingClientRect();
+  const w = Math.floor(rect.width || el.clientWidth || 0);
+  return Math.max(340, w);
+}
+
+/* Read the intrinsic width of the rendered <svg> in #svg */
+function svgIntrinsicWidthPx(){
+  const svg = document.querySelector('#svg svg');
+  if (!svg) return 0;
+  const wAttr = parseFloat(svg.getAttribute('width') || "0");
+  if (Number.isFinite(wAttr) && wAttr > 0) return wAttr;
+  try{
+    const box = svg.getBBox();
+    return box.width || 0;
+  } catch {
+    return 0;
+  }
+}
+
+/* Render Humdrum once with a specific pageWidth and transpose string */
+function renderHumOnce(krnText, transposeStr, optionsOverride = {}){
+  const { scale, spacingLinear } = getCurrentScaleSpacing(); // uses your existing helper
+
+  const options = {
+    ...baseOptions,
+    pageWidth: Math.max(100, Math.floor(optionsOverride.pageWidth || baseOptions.pageWidth || 900)),
+    scale: Number(scale),
+    spacingLinear: Number(spacingLinear),
+    transpose: String(transposeStr || "")
+  };
+
+  // Track what we send for debugging / parity with your existing trace
+  lastRenderTranspose = options.transpose;
+
+  if (vrv) {
+    vrv.setOptions(options);
+    const svg = vrv.renderData(krnText || '', {}); // Humdrum path
+    svgHost.innerHTML = svg;
+
+    // REMOVE the maxHeight clamp to avoid internal vertical scrolling.
+    // If you previously added it, ensure it's not applied:
+    const viewer = document.getElementById('viewer');
+    if (viewer) viewer.style.maxHeight = "";  // clear any old clamp
+  } else {
+    svgHost.textContent = '(verovio not initialized) — preview disabled';
+  }
+}
+
+/* Iteratively fit the rendered SVG width to nearly fill the viewer */
+async function fitPageWidthToViewerHum(krnText, transposeStr){
+  const avail = viewerAvailableWidth();
+  const hardMax = Math.floor(avail - 6);  // small safety margin
+  const FILL_TARGET = 0.92;               // aim for ~92% of container
+
+  // Heuristic start: reuse last good width unless we just changed spacing
+  let pw = (lastGoodPageWidth && Math.abs(lastGoodPageWidth - avail) < 260 && lastRenderReason !== "spacing")
+    ? lastGoodPageWidth
+    : avail;
+
+  // 1) initial render
+  renderHumOnce(krnText, transposeStr, { pageWidth: pw });
+  let w = svgIntrinsicWidthPx();
+
+  // 2) shrink if necessary
+  let tries = 0;
+  while (w > hardMax && tries < 8){
+    pw = Math.max(320, Math.floor(pw * 0.94));
+    renderHumOnce(krnText, transposeStr, { pageWidth: pw });
+    w = svgIntrinsicWidthPx();
+    tries++;
+  }
+
+  // 3) grow toward target fill
+  tries = 0;
+  while (w > 0 && w < hardMax * FILL_TARGET && tries < 10){
+    const bump = Math.max(16, Math.floor((hardMax - w) * 0.35));
+    pw = Math.min(5000, pw + bump);
+    renderHumOnce(krnText, transposeStr, { pageWidth: pw });
+    const newW = svgIntrinsicWidthPx();
+    if (newW <= w + 1) break; // stalled
+    w = newW;
+    if (w > hardMax) break;
+    tries++;
+  }
+
+  // 4) final clamp down if we overshot
+  tries = 0;
+  w = svgIntrinsicWidthPx();
+  while (w > hardMax && tries < 8){
+    pw = Math.max(320, Math.floor(pw * 0.96));
+    renderHumOnce(krnText, transposeStr, { pageWidth: pw });
+    w = svgIntrinsicWidthPx();
+    tries++;
+  }
+
+  lastGoodPageWidth = pw;
+}
+
+/* Light debounce helper for resize events */
+function debounce(fn, delay = 150){
+  let t = null;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), delay); };
+}
+
+
+// === REPLACEMENT: renderWithVerovio() uses fit-to-viewer loop ===
 function renderWithVerovio(krnText, tonicForRender){
   try {
-    const { scale, spacingLinear } = getCurrentScaleSpacing();
+    // Build the transpose parameter the same way you already do:
+    // Prefer numeric when currentRenderSemitoneShift is set; otherwise tonic string.
+    const transposeParam =
+      (currentRenderSemitoneShift && !isNaN(Number(currentRenderSemitoneShift)))
+        ? String(Number(currentRenderSemitoneShift))
+        : (tonicForRender ? tonicToVerovioAscii(String(tonicForRender)) : '');
 
-    // Determine a safe container width for pageWidth.
-    // svgHost.clientWidth may be 0 if the element is not yet laid out.
-    // Use a conservative fallback and enforce Verovio's minimum (100).
-    let containerWidth = 0;
-    try { containerWidth = Math.round(svgHost.clientWidth || 0); } catch(e){ containerWidth = 0; }
-    if (!containerWidth || containerWidth < 100) {
-      // Use a reasonable fallback that won't trigger Verovio bounds error.
-      // 900 is what you used previously; 1200 is also safe. Choose 900 to keep similar layout.
-      containerWidth = 900;
-    }
-    // Now apply options ensuring pageWidth is within allowed range.
-    const verovioOptions = {
-      ...baseOptions,
-      pageWidth: containerWidth,
-      scale: Number(scale),
-      spacingLinear: Number(spacingLinear),
-      transpose: (currentRenderSemitoneShift && !isNaN(Number(currentRenderSemitoneShift))) ? String(Number(currentRenderSemitoneShift)) : (tonicForRender ? tonicToVerovioAscii(String(tonicForRender)) : '')
-    };
-
-    // Track what we're sending to verovio (useful for trace/debug)
-    lastRenderTranspose = verovioOptions.transpose || '';
-
-    if (vrv) {
-      vrv.setOptions(verovioOptions);
-      const svg = vrv.renderData(krnText || '', {});
-      svgHost.innerHTML = svg;
-    } else {
-      svgHost.textContent = '(verovio not initialized) — preview disabled';
-    }
+    // Run the iterative pageWidth fitting loop
+    fitPageWidthToViewerHum(krnText || '', transposeParam);
   } catch (e) {
     svgHost.textContent = 'Render failed: ' + (e?.message || e);
-    traceLog('renderWithVerovio error: ' + (e?.message || e));
+    traceLog && traceLog('renderWithVerovio error: ' + (e?.message || e));
+  } finally {
+    lastRenderReason = "other";
   }
 }
 
@@ -2047,8 +2190,16 @@ if (scalePlus) scalePlus.addEventListener('click', ()=>{ scaleSlider.value = Mat
 if (scaleReset) scaleReset.addEventListener('click', ()=>{ scaleSlider.value = 50; updateScaleValueDisplay(); if (currentKrn) renderWithVerovio(currentKrn, lastTargetTonic); else renderWithVerovio(sample, ''); });
 
 if (spacingMinus) spacingMinus.addEventListener('click', ()=>{ spacingSlider.value = Math.max(10, Number(spacingSlider.value)-1); updateSpacingValueDisplay(); if (currentKrn) renderWithVerovio(currentKrn, lastTargetTonic); else renderWithVerovio(sample, ''); });
-if (spacingPlus) spacingPlus.addEventListener('click', ()=>{ spacingSlider.value = Math.min(80, Number(spacingSlider.value)+1); updateSpacingValueDisplay(); if (currentKrn) renderWithVerovio(currentKrn, lastTargetTonic); else renderWithVerovio(sample, ''); });
+if (spacingPlus) spacingPlus.addEventListener('click', ()=>{ spacingSlider.value = Math.min(120, Number(spacingSlider.value)+1); updateSpacingValueDisplay(); if (currentKrn) renderWithVerovio(currentKrn, lastTargetTonic); else renderWithVerovio(sample, ''); });
 if (spacingReset) spacingReset.addEventListener('click', ()=>{ spacingSlider.value = 32; updateSpacingValueDisplay(); if (currentKrn) renderWithVerovio(currentKrn, lastTargetTonic); else renderWithVerovio(sample, ''); });
+
+
+// Refit on viewport resize (phone rotation, split view, etc.)
+window.addEventListener('resize', debounce(() => {
+  lastRenderReason = "resize";
+  lastGoodPageWidth = null;  // force the loop to recompute a good width
+  if (currentKrn) renderWithVerovio(currentKrn, lastTargetTonic || '');
+}, 150));
 
 // -------------------- Misc UI placeholders --------------------
 if (tpMinus) tpMinus.addEventListener('click', ()=> { /* handled above */ });
