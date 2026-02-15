@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -368,9 +369,10 @@ header {
     <div class="group" data-role="fig-place" style="align-self:flex-start; min-width:auto;">
       <div class="small">Figures</div>
       <div class="radio-inline" id="figPlaceInline">
-        <label id="labelFigBelow"><input type="radio" name="figPlace" id="fbBelow" value="below" checked> below</label>
-        <label id="labelFigAbove"><input type="radio" name="figPlace" id="fbAbove" value="above"> above</label>
-      </div>
+     
+<label id="labelFigBelow"><input type="radio" name="figPlace" id="fbBelow" value="below"> below</label>
+<label id="labelFigAbove"><input type="radio" name="figPlace" id="fbAbove" value="above" checked> above</label>
+</div>
     </div>
   </div>
 
@@ -446,7 +448,7 @@ const accRadios = Array.from(document.querySelectorAll('input[name="accMode"]'))
 let ACC_MODE = 'historic'; // 'historic' | 'modern'
 
 // NEW (CHANGE #3): Figured-bass placement state (false = below **fb, true = above **fba)
-let FB_ABOVE = false;
+let FB_ABOVE = true;
 
 // Key range state/UI
 const keyButtons = Array.from(document.querySelectorAll('.key-btn'));
@@ -2078,6 +2080,11 @@ if (!currentKrn) {
   const prepared = suppressThirdFourthSpinesAfterKey(sample);
   humPanel.textContent = '##original\n' + prepared + '\n\n##transposed to [none]\n';
   renderWithVerovio(sample, '');
+  
+const samplePlaced = applyFiguredBassPlacement(sample, /* placeAbove */ true);
+currentKrn = samplePlaced;                  // keep currentKrn consistent
+renderWithVerovio(samplePlaced, '');
+
   setStatus('ready — toggle TRACE and click "New Bass Line"');
 }
 
