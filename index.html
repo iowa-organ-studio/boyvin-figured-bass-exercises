@@ -10,17 +10,22 @@
 <script src="https://www.verovio.org/javascript/latest/verovio-toolkit-hum.js"></script>
 <style>
 :root{
-  --bg:#f7f7f9;
+  --bg:#f5f5f4;            /* you can keep your current bg if you prefer */
   --card:#fff;
   --border:#e6e6ea;
   --ink:#111;
   --muted:#666;
-  --gold:#FFCD00;
-  --gold-ink:#2b2000;
-  --butter:#FFEFAD;
+
+  /* === New blue family (Chartres-inspired) === */
+  --blue-deep:#0b2a6f;     /* deep rich stained-glass blue (primary) */
+  --butter:#e7eefc;        /* light, quiet blue for "selected" chips */
+  --gold:#6f92e6;          /* medium blue used as selected border */
+  --gold-ink:#0b2a6f;      /* deep text on selected chips */
+
   --grey:#e4e4e7;
   --accent-green:#1f7a4b;
 }
+
 html,body{height:100%}
 body{
   font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;
@@ -28,6 +33,26 @@ body{
 }
 .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px}
 header{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+
+
+
+/* Background-based logo strip (tight and ~40% smaller) */
+#logoLockup {
+  height: 140px;  /* ~40% smaller vs 56px; tweak between 32–36px to taste */
+  background-image: url("Organ-Studio-LockupStacked-RGB.svg");
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: contain;
+  line-height: 0;   /* no inline box gap */
+  margin: 0;
+  padding: 0;
+}
+
+/* Optional: slightly smaller in the card only (wins over the generic logo rule) */
+#logoCard #logoAfterFilters img {
+  max-width: 52%;
+}
+
 
 /* Make header a flex row and vertically center items */
 header {
@@ -78,6 +103,16 @@ header {
 #keyPill{ display:inline-block; }
 .title-pill small{ color:var(--muted); font-weight:500; margin-left:6px}
 
+
+/* === Studio credit as a pill (right-aligned) === */
+.studio-credit-pill {
+  margin-left: auto;            /* push to far right */
+  font-weight: 700;
+  white-space: nowrap;
+  font-size: 0.95rem;
+}
+
+
 /* ======= Buttons ======= */
 .btn{
   padding:4px 8px;border-radius:999px;border:1px solid var(--grey);
@@ -87,6 +122,18 @@ header {
 
 /* Make the select all/none buttons black (not grey) */
 #selectAllKeys, #selectNoneKeys, #includeSelectAll, #includeSelectNone { color: var(--ink); background: #fff; border-color: var(--border); font-weight:600; }
+
+
+/* FORCE Ex. # "all/none" to use grey, not butter */
+/* PLACE THIS RIGHT AFTER THE OTHER .btn STYLE SECTION */
+#levelSelectAll,
+#levelSelectNone {
+  background: var(--grey) !important;
+  border-color: var(--border) !important;
+  color: #222 !important;
+  font-weight: 600;
+}
+
 
 /* ======= Chips container line ======= */
 .line{
@@ -99,21 +146,97 @@ header {
 .group .small{font-size:.82rem;font-weight:700;color:#333}
 
 /* ======= Row 1 ======= */
+/* Primary action: deep stained-glass blue, subtle 3D */
 .new-bass-btn{
-  padding:8px 12px;border-radius:999px;border:1px solid #e6b800;background:var(--gold);
-  color:var(--gold-ink);font-weight:600;cursor:pointer
+  /* layout */
+  padding: 8px 14px;
+  border-radius: 999px;
+
+  /* remove old yellow border and add deep-blue border */
+  border: 1px solid #071736;            /* darker than fill, removes yellow outline */
+
+  /* deep religious blue + gentle top-to-bottom gradient for depth */
+  background: linear-gradient(
+    to bottom,
+    #0c2f6f 0%,                          /* slightly lighter top edge */
+    #0a275f 50%,
+    #09245a 100%                         /* slightly darker bottom edge */
+  );
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+
+  /* subtle elevation */
+  box-shadow:
+    0 1.5px 0 rgba(0,0,0,0.25),          /* tiny crisp base edge */
+    0 6px 14px rgba(0,0,0,0.18);         /* soft lift */
+
+  /* smooth interactions */
+  transition:
+    transform 120ms ease,
+    box-shadow 150ms ease,
+    background 150ms ease,
+    border-color 150ms ease;
+}
+
+/* Hover: a touch brighter + slightly higher shadow (feels raised) */
+.new-bass-btn:hover{
+  background: linear-gradient(
+    to bottom,
+    #10357c 0%,
+    #0c2f6f 50%,
+    #0a275f 100%
+  );
+  box-shadow:
+    0 2px 0 rgba(0,0,0,0.25),
+    0 10px 18px rgba(0,0,0,0.20);
+  transform: translateY(-1px);
+}
+
+/* Focus: accessible blue focus ring (no yellow outline) */
+.new-bass-btn:focus-visible{
+  outline: 3px solid rgba(90, 130, 220, 0.5);  /* soft blue ring */
+  outline-offset: 2px;
+}
+
+/* Active/Pressed: deeper, flatter, slight press-in */
+.new-bass-btn:active{
+  background: linear-gradient(
+    to bottom,
+    #0a275f 0%,
+    #09245a 50%,
+    #081f4a 100%
+  );
+  border-color: #061230;
+  box-shadow:
+    0 1px 0 rgba(0,0,0,0.28),
+    0 4px 10px rgba(0,0,0,0.18);
+  transform: translateY(1px);
+}
+
+/* Disabled safety (if you use disabled state while no matches) */
+.new-bass-btn:disabled{
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.15);
 }
 
 /* ======= Viewer ======= */
 #viewer{ margin-top:8px; }
 
-/* Tagline image under the viewer (CHANGE #1) */
+
+/* Tagline image under the viewer (CHANGE #1, shrunk) */
+/* PLACE THIS BY REPLACING THE EXISTING RULE IN THE SAME SPOT */
 #modeTagline img.tagline-img {
-  max-height: 66px;
+  max-height: 44px;     /* was 66px; you can try 40px if you want even smaller */
+  max-width: 42%;       /* constrain width too so it doesn't look oversized */
+  width: auto;          /* keep aspect ratio */
   height: auto;
   display: block;
   margin: 2px 0 0 0;
 }
+
 
 /* Hidden accessibility helper for historical status */
 .visually-hidden {
@@ -146,7 +269,13 @@ header {
 
 /* ======= Row 4: Filters (no big outer card) ======= */
 /* Hide labels that used to exist for dir/mode (removed in markup) */
-.group[data-role="level"] .small{ display:none }
+/* Show the label for the level card ("Ex. #") */
+
+.group[data-role="level"] .small { 
+  display: inline-block; 
+  margin-right: 8px;   /* give a small gap before the chips */
+}
+
 
 /* Accidentals radios styled to look like chips, mutually exclusive by native radio */
 .radio-inline{display:flex;align-items:center;gap:6px}
@@ -160,14 +289,41 @@ header {
   background:var(--butter);border-color:var(--gold);color:var(--gold-ink)
 }
 
-/* Level buttons (12) */
-.level-grid{ display:flex; gap:6px; flex-wrap:wrap; max-width:520px; }
-.level-btn{
-  padding:6px 8px;border-radius:8px;border:1px solid var(--border);
-  background:#fff;color:var(--ink);cursor:pointer;font-size:.82rem;font-weight:600;
-  min-width:34px; text-align:center;
+/* Level buttons (12) — let the grid expand so "all/none" can sit inline */
+.level-grid {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;     /* allows graceful wrapping on small screens */
+  /* removed max-width so the control buttons can stay on the same line */
 }
+
 .level-btn.toggled, .level-btn.selected{ background:var(--butter); border-color:var(--gold); color:var(--gold-ink) }
+
+
+/* Show toggles should look like the radio-style chips (Historic/Modern/Above/Below) */
+/* REPLACE your current [data-role="show"] .level-btn rule with THIS */
+[data-role="show"] .level-btn {
+  padding: 4px 8px;                    /* same as .radio-inline label */
+  border-radius: 999px;
+  border: 1px solid var(--grey);
+  background: var(--grey);
+  color: #222;
+  font-size: .82rem;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 400;                     /* not bold, match radio chips */
+}
+
+/* Selected state to match .radio-inline label.selected */
+[data-role="show"] .level-btn.toggled {
+  background: var(--butter);
+  border-color: var(--gold);
+  color: var(--gold-ink);
+}
+
 
 /* ======= Include spelled-tonics grid (replaces previous pc-grid) ======= */
 .include-grid{display:flex;flex-wrap:wrap;gap:6px;max-width:720px}
@@ -176,6 +332,18 @@ header {
   background:#fff;color:var(--ink);cursor:pointer;font-size:.82rem;font-weight:600;
 }
 .include-btn.toggled{ background:var(--butter); border-color:var(--gold); color:var(--gold-ink) }
+
+/* Make "all/none" buttons use grey (Key Range + Include) */
+/* PLACE THIS BY REPLACING THE EXISTING WHITE-BACKGROUND RULE */
+#selectAllKeys, 
+#selectNoneKeys, 
+#includeSelectAll, 
+#includeSelectNone {
+  background: var(--grey);
+  border-color: var(--border);
+  color: #222;
+  font-weight: 600;
+}
 
 /* ======= Transpose/Octave/Enharmonic — keep in DOM, hide visually ======= */
 .controls-row{ display:none !important; }
@@ -239,17 +407,23 @@ header {
 
 /* ======= Logo ======= */
 #logoAfterFilters img {
-  max-width: 66%;
+  max-width: 44%;
   height: auto;
   display: block;
   margin-left: auto;
   margin-right: auto;
 }
+
+
+#logoCard #logoAfterFilters img {
+  max-width: 58%;      /* slightly smaller inside the card */
+}
+
 </style>
 </head>
 <body>
 
-<div class="card">
+
   <!-- ===== Row 1: New Bass Line, Title, Key ===== -->
   <header>
   <!-- Left side: button and badges -->
@@ -260,7 +434,7 @@ header {
   </div>
 
   <!-- Right side: studio credit -->
-  <strong class="studio-credit">Created for the University of Iowa Organ Studio</strong>
+  <div class="title-pill studio-credit-pill">Created for the University of Iowa Organ Studio</div>
 </header>
 
   <!-- ===== Row 2: Music viewer ===== -->
@@ -338,8 +512,8 @@ header {
   <!-- ===== Row 4: Filters (NO big outer card) ======= -->
   <div class="line" id="row4">
     <!-- Left area: Level (12) -->
-    <div class="group" data-role="level" style="flex-direction:column;align-items:flex-start">
-      <div class="small">Lvl:</div>
+    <div class="group" data-role="level" style="align-items:center; flex-wrap:nowrap;">
+      <div class="small">Ex. #</div>
       <div id="diffRow" class="level-grid">
         <!-- 12 level buttons -->
         <button class="level-btn btn selected" data-filter="diff" data-value="1">1</button>
@@ -354,7 +528,10 @@ header {
         <button class="level-btn btn selected" data-filter="diff" data-value="10">10</button>
         <button class="level-btn btn selected" data-filter="diff" data-value="11">11</button>
         <button class="level-btn btn selected" data-filter="diff" data-value="12">12</button>
+        <button id="levelSelectAll" class="btn" type="button">all</button>
+       <button id="levelSelectNone" class="btn" type="button">none</button>
       </div>
+      
     </div>
 
     <div class="group" data-role="accidentals">
@@ -365,15 +542,12 @@ header {
       </div>
     </div>
 
-    <!-- Clear filters and Only Complete on same horizontal row (clear -> checkbox) -->
-    <div class="group" data-role="clear-and-complete" style="display:flex;align-items:center;gap:12px">
-      <div style="display:flex;gap:8px;align-items:center">
-        <button id="clearFilters" class="btn">Clear filters</button>
-      </div>
-      <label class="small" style="display:flex;align-items:center;gap:8px">
-        <input type="checkbox" id="onlyCompleteCheckbox" /> Only Complete Exercises
-      </label>
-    </div>
+    <!-- NEW: Show group (phrase/complete toggles) -->
+<div class="group" data-role="show" style="display:flex;align-items:center;gap:8px">
+  <div class="small" style="min-width:52px">Show</div>
+  <button id="showPhraseBtn"   class="level-btn toggled" type="button">phrase</button>
+  <button id="showCompleteBtn" class="level-btn"         type="button">complete</button>
+</div>
 
     <div class="spacer"></div>
   </div>
@@ -400,10 +574,16 @@ header {
     </div>
   </div>
 
-  <!-- ===== Humdrum panel ===== -->
-  <label class="small" style="margin-top:8px;display:block">Displayed humdrum / .krn (absolute original shown below):</label>
-  <div id="humPanel" class="card" style="margin-top:8px;white-space:pre-wrap;font-family:monospace">(no file loaded)</div>
-
+ <!-- ===== Humdrum panel (hidden) =====
+<label class="small" style="margin-top:8px;display:block">
+  Displayed humdrum / .krn (absolute original shown below):
+</label>
+<div id="humPanel" class="card" 
+     style="margin-top:8px;white-space:pre-wrap;font-family:monospace">
+  (no file loaded)
+</div>
+===== END Humdrum panel (hidden) ===== -->
+  
   <!-- ===== Trace panel (kept for JS, hidden) ===== -->
   <!-- To re-show, remove display:none on this container -->
   <div class="card" style="margin-top:8px; display:none">
@@ -418,7 +598,7 @@ header {
     <label class="small" style="margin-top:6px;display:block">Trace output (copy &amp; paste here):</label>
     <div id="tracePanel" class="card" style="margin-top:6px;white-space:pre-wrap;font-family:monospace">(trace disabled)</div>
   </div>
-</div>
+
 
 <!-- Logo directly after filters -->
 <div id="logoAfterFilters" aria-label="University of Iowa Organ Studio logo">
@@ -467,6 +647,10 @@ const downloadTraceBtn = document.getElementById('downloadTrace');
 const modeTagline = document.getElementById('modeTagline');
 // NOTE: historicalStatus will be re-queried after we rewrite innerHTML.
 
+// --- Null-safe Humdrum writer helpers (panel may be commented out) ---
+function humSet(text) { if (humPanel) humPanel.textContent = String(text ?? ''); }
+function humAppend(text) { if (humPanel) humPanel.textContent += String(text ?? ''); }
+
 // Accidentals (Historic/Modern)
 const accRadios = Array.from(document.querySelectorAll('input[name="accMode"]'));
 let ACC_MODE = 'historic'; // 'historic' | 'modern'
@@ -486,8 +670,7 @@ const includeSelectAllBtn = document.getElementById('includeSelectAll');
 const includeSelectNoneBtn = document.getElementById('includeSelectNone');
 let allowedTonicBases = new Set(); // elements like "F#", "B-", "C" where flats use '-' glyph
 
-// Only Complete checkbox
-const onlyCompleteCheckbox = document.getElementById('onlyCompleteCheckbox');
+
 
 // Scale / Spacing (UI-only)
 const scaleSlider = document.getElementById('scaleSlider');
@@ -1408,11 +1591,21 @@ function matchesFilters(item){
     const d = String(item.diff ?? '');
     if (!selected.diff.has(d)) return false;
   }
-  // Only Complete Exercises checkbox: require rawNumber to be purely digits
-  if (onlyCompleteCheckbox && onlyCompleteCheckbox.checked) {
-    const rn = String(item.rawNumber || '');
-    if (!/^\d+$/.test(rn)) return false;
-  }
+
+  // Show: phrase / complete, based solely on !! Number
+  const rn = String(item.rawNumber || '');
+  const isComplete = /^\d+$/.test(rn);  // digits only => complete
+
+  // If both off, show nothing
+  if (!SHOW_PHRASE && !SHOW_COMPLETE) return false;
+
+  // If only complete is on
+  if (!SHOW_PHRASE && SHOW_COMPLETE) return isComplete;
+
+  // If only phrase is on
+  if (SHOW_PHRASE && !SHOW_COMPLETE) return !isComplete;
+
+  // If both on
   return true;
 }
 
@@ -1862,16 +2055,16 @@ function runPipelineForEntry(entry, tonic, m){
   lastTransformedKrn = transformed;
   currentKrn = applyFiguredBassPlacement(lastTransformedKrn, FB_ABOVE);
 
-  // Humdrum panel (kept same sections)
-  humPanel.textContent = '';
-  humPanel.textContent += '## 1) ORIGINAL .krn (absolute source)\n\n';
-  humPanel.textContent += originalAbsolute + '\n\n';
-  humPanel.textContent += '## 2) .krn sent to Verovio (after modern override + courtesy + q-resolve; then suppressed)\n\n';
-  humPanel.textContent += krnSentToVerovio + '\n\n';
-  humPanel.textContent += `## TARGET KEY: ${formatKeyName(tonic, m)}\n\n`;
-  humPanel.textContent += '## 3) Transpose output (after figure-aware transform)\n\n';
-  humPanel.textContent += lastTransformedKrn + '\n\n';
-  humPanel.textContent += `## 4) Historical mode status: Historical=${ACC_MODE==='historic' ? 'TRUE' : 'FALSE'}\n`;
+// Humdrum panel (kept same sections, but null-safe)
+humSet('');
+humAppend('## 1) ORIGINAL .krn (absolute source)\n\n');
+humAppend(originalAbsolute + '\n\n');
+humAppend('## 2) .krn sent to Verovio (after modern override + courtesy + q-resolve; then suppressed)\n\n');
+humAppend(krnSentToVerovio + '\n\n');
+humAppend(`## TARGET KEY: ${formatKeyName(tonic, m)}\n\n`);
+humAppend('## 3) Transpose output (after figure-aware transform)\n\n');
+humAppend(lastTransformedKrn + '\n\n');
+humAppend(`## 4) Historical mode status: Historical=${ACC_MODE==='historic' ? 'TRUE' : 'FALSE'}\n`);
 
   // Remember keys so toggles can act
   lastTargetTonic = tonic;
@@ -2117,6 +2310,28 @@ Array.from(document.querySelectorAll('#diffRow .btn')).forEach(btn => {
   });
 });
 
+// --- Level all/none controls ---
+const levelSelectAllBtn  = document.getElementById('levelSelectAll');
+const levelSelectNoneBtn = document.getElementById('levelSelectNone');
+
+if (levelSelectAllBtn) {
+  levelSelectAllBtn.addEventListener('click', () => {
+    // select 1..12 in internal state
+    selected.diff.clear();
+    for (let i = 1; i <= 12; i++) selected.diff.add(String(i));
+    // reflect in UI
+    document.querySelectorAll('#diffRow .btn').forEach(b => b.classList.add('selected'));
+    updateMatchCount();
+  });
+}
+if (levelSelectNoneBtn) {
+  levelSelectNoneBtn.addEventListener('click', () => {
+    selected.diff.clear();
+    document.querySelectorAll('#diffRow .btn').forEach(b => b.classList.remove('selected'));
+    updateMatchCount();
+  });
+}
+
 // Clear filters button: clear internal diff set and visual selected classes
 if (clearBtn) {
   clearBtn.addEventListener('click', () => {
@@ -2126,9 +2341,29 @@ if (clearBtn) {
   });
 }
 
-// Wire Only Complete checkbox change to update counts (UI)
-if (onlyCompleteCheckbox){
-  onlyCompleteCheckbox.addEventListener('change', () => {
+// Show toggles (replacing "Only Complete" checkbox)
+let SHOW_PHRASE   = true;  // default ON
+let SHOW_COMPLETE = false; // default OFF
+
+const showPhraseBtn   = document.getElementById('showPhraseBtn');
+const showCompleteBtn = document.getElementById('showCompleteBtn');
+
+function refreshShowButtons(){
+  if (showPhraseBtn)   showPhraseBtn.classList.toggle('toggled', SHOW_PHRASE);
+  if (showCompleteBtn) showCompleteBtn.classList.toggle('toggled', SHOW_COMPLETE);
+}
+
+if (showPhraseBtn) {
+  showPhraseBtn.addEventListener('click', () => {
+    SHOW_PHRASE = !SHOW_PHRASE;
+    refreshShowButtons();
+    updateMatchCount();
+  });
+}
+if (showCompleteBtn) {
+  showCompleteBtn.addEventListener('click', () => {
+    SHOW_COMPLETE = !SHOW_COMPLETE;
+    refreshShowButtons();
     updateMatchCount();
   });
 }
@@ -2229,7 +2464,7 @@ updateMatchCount();
 if (!currentKrn) {
   currentEntry = { path:'sample', text: sample, dir:'descending', mode:'major', diff:1, title:'Sample' };
   const prepared = suppressThirdFourthSpinesAfterKey(sample);
-  humPanel.textContent = '##original\n' + prepared + '\n\n##transposed to [none]\n';
+  humSet('##original\n' + prepared + '\n\n##transposed to [none]\n');
   renderWithVerovio(sample, '');
   
 const samplePlaced = applyFiguredBassPlacement(sample, /* placeAbove */ true);
