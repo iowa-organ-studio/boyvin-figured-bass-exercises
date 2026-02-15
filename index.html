@@ -27,6 +27,42 @@ body{
 .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px}
 header{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 
+/* Make header a flex row and vertically center items */
+header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+/* Prevent the left group from stretching */
+#randomFiltered,
+#titlePills {
+  flex: 0 0 auto;
+}
+
+/* Push the studio credit to the far right */
+.studio-credit {
+  margin-left: auto;    
+  font-weight: 700;
+  white-space: nowrap;
+  font-size: 0.95rem;
+}
+
+/* Responsive fix for small screens */
+@media (max-width: 640px) {
+  header {
+    flex-wrap: wrap;
+  }
+  .studio-credit {
+    margin-left: 0;
+    order: 3;
+    width: 100%;
+    text-align: right;
+    padding-top: 6px;
+  }
+}
+
 .small{font-size:.9rem;color:var(--muted)}
 .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .spacer{flex:1}
@@ -68,6 +104,25 @@ header{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 
 /* ======= Viewer ======= */
 #viewer{ margin-top:8px; }
+
+/* Tagline image under the viewer (CHANGE #1) */
+#modeTagline img.tagline-img {
+  max-height: 66px;
+  height: auto;
+  display: block;
+  margin: 6px 0 0 0;
+}
+
+/* Hidden accessibility helper for historical status */
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(1px, 1px, 1px, 1px);
+}
 
 /* ======= Row 3: Key Range + Scale + Spacing (no outer big card) ======= */
 .key-grid{
@@ -132,16 +187,16 @@ header{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .humdrum-chevron{ font-weight:800;color:#555 }
 .humdrum-original-label{ display:none !important }
 
-/* Boyvin signature badge: narrow horizontal image placed to the right of #keyPill */
+/* Boyvin signature badge (kept; no longer used after change #1, left untouched) */
 .boyvin-signature {
   display: inline-block;
-  margin-left: 10px;              /* space from key pill */
+  margin-left: 10px;
   vertical-align: middle;
-  line-height: 0;                 /* remove inline-gap */
+  line-height: 0;
 }
 .boyvin-signature img {
   display: block;
-  max-height: 40px;               /* tune this to taste (px) */
+  max-height: 40px;
   width: auto;
   height: auto;
   object-fit: contain;
@@ -150,6 +205,12 @@ header{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
   opacity: 0.98;
 }
 
+/* Upper-left studio credit (CHANGE #2) */
+.studio-credit-left {
+  font-weight: 700;
+  white-space: nowrap;
+  font-size: 0.95rem;
+}
 
 /* ======= Logo ======= */
 #logoAfterFilters img {
@@ -166,20 +227,24 @@ header{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 <div class="card">
   <!-- ===== Row 1: New Bass Line, Title, Key ===== -->
   <header>
-    <button id="randomFiltered" class="new-bass-btn" type="button">New Bass Line</button>
-    <div class="title-badges" id="titlePills" aria-hidden="false" style="margin-left:6px">
-      <div class="title-pill" id="titlePill">No title <small id="titleSub"></small></div>
-      <div class="title-pill" id="keyPill"><span id="keyPillValue">original</span></div>
-    </div>
-    <div class="spacer"></div>
-  </header>
+  <!-- Left side: button and badges -->
+  <button id="randomFiltered" class="new-bass-btn" type="button">New Bass Line</button>
+  <div class="title-badges" id="titlePills" aria-hidden="false" style="margin-left:6px">
+    <div class="title-pill" id="titlePill">No title <small id="titleSub"></small></div>
+    <div class="title-pill" id="keyPill"><span id="keyPillValue">original</span></div>
+  </div>
+
+  <!-- Right side: studio credit -->
+  <strong class="studio-credit">Created for the University of Iowa Organ Studio</strong>
+</header>
 
   <!-- ===== Row 2: Music viewer ===== -->
   <div id="viewer" class="card" style="margin-top:8px">
     <div id="svg">Waiting for Verovio…</div>
     <div id="modeTagline" class="small" style="margin-top:8px">
-      Created for the University of Iowa Organ Studio
-      <span id="historicalStatus" style="margin-left:12px;color:var(--muted)">Historical=TRUE</span>
+      <!-- CHANGE #1: move Boyvin png to tagline -->
+      <img class="tagline-img" src="boyvinsignature.png" alt="Boyvin signature">
+      <span id="historicalStatus" class="visually-hidden"></span>
     </div>
   </div>
 
@@ -298,6 +363,15 @@ header{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
       </div>
       <div class="include-grid" id="includeGrid" aria-label="Spelled tonics to include (select to restrict)"></div>
     </div>
+
+    <!-- CHANGE #3: Figures placement controls -->
+    <div class="group" data-role="fig-place" style="align-self:flex-start; min-width:auto;">
+      <div class="small">Figures</div>
+      <div class="radio-inline" id="figPlaceInline">
+        <label id="labelFigBelow"><input type="radio" name="figPlace" id="fbBelow" value="below" checked> below</label>
+        <label id="labelFigAbove"><input type="radio" name="figPlace" id="fbAbove" value="above"> above</label>
+      </div>
+    </div>
   </div>
 
   <!-- ===== Humdrum panel ===== -->
@@ -365,11 +439,14 @@ const clearTraceBtn = document.getElementById('clearTrace');
 const downloadTraceBtn = document.getElementById('downloadTrace');
 
 const modeTagline = document.getElementById('modeTagline');
-const historicalStatus = document.getElementById('historicalStatus');
+// NOTE: historicalStatus will be re-queried after we rewrite innerHTML.
 
 // Accidentals (Historic/Modern)
 const accRadios = Array.from(document.querySelectorAll('input[name="accMode"]'));
 let ACC_MODE = 'historic'; // 'historic' | 'modern'
+
+// NEW (CHANGE #3): Figured-bass placement state (false = below **fb, true = above **fba)
+let FB_ABOVE = false;
 
 // Key range state/UI
 const keyButtons = Array.from(document.querySelectorAll('.key-btn'));
@@ -1191,6 +1268,9 @@ let lastRenderTranspose = ''; // what was sent to verovio transpose (tonic or nu
 let transposePreferFlats = false;
 let currentRenderSemitoneShift = 0;
 
+// NEW (CHANGE #3): Keep a copy before placement so radios can re-apply quickly
+let lastTransformedKrn = '';
+
 // -------------------- Fetch helpers --------------------
 async function fetchList(){
   try {
@@ -1512,6 +1592,86 @@ function renderWithVerovio(krnText, tonicForRender){
 }
 
 
+// -------------------- CHANGE #3: Figured-bass placement transformer --------------------
+// Switch **fb <-> **fba in header and manage 'x' padding for alignment when above.
+function applyFiguredBassPlacement(krnText, placeAbove) {
+  if (!krnText) return krnText;
+  const lines = krnText.split(/\r?\n/);
+  let headerLineIdx = -1;
+  let fbIndex = -1;
+
+  // 1) Find the first header line containing **spines and locate the **fb/**fba spine index
+  for (let i = 0; i < lines.length; i++) {
+    const s = lines[i];
+    if (!/\*\*/.test(s)) continue; // not a spine header
+    const toks = s.split('\t');
+    for (let c = 0; c < toks.length; c++) {
+      if (/^\*\*fb(?:a)?\b/.test(toks[c])) {
+        fbIndex = c;
+      }
+    }
+    headerLineIdx = i;
+    break;
+  }
+  if (headerLineIdx < 0 || fbIndex < 0) return krnText; // no **fb/**fba spine found
+
+  // 2) Rewrite header token: **fb -> **fba for above, and reverse for below
+  {
+    const toks = lines[headerLineIdx].split('\t');
+    toks[fbIndex] = placeAbove
+      ? toks[fbIndex].replace(/^\*\*fb(?:a)?/, '**fba')
+      : toks[fbIndex].replace(/^\*\*fba/, '**fb');
+    lines[headerLineIdx] = toks.join('\t');
+  }
+
+  // 3) Compute global max number of numerals across the fb spine (for top-alignment)
+  function countNumerals(tok) {
+    if (!tok || tok === '.' || /^[\*\=\!\|]/.test(tok)) return 0;
+    const parts = tok.trim().split(/\s+/);
+    let numerals = 0;
+    for (const p of parts) {
+      const m = p.match(/\d+/g);
+      numerals += m ? m.length : (/\d/.test(p) ? 1 : 0);
+    }
+    return numerals || (parts.some(p => /\d/.test(p)) ? 1 : 0);
+  }
+  let globalMax = 0;
+  for (let i = headerLineIdx + 1; i < lines.length; i++) {
+    const s = lines[i];
+    if (!s.includes('\t')) continue;
+    const toks = s.split('\t');
+    const tok = toks[fbIndex];
+    if (!tok || tok === '.' || /^[\*\=\!\|]/.test(tok)) continue;
+    globalMax = Math.max(globalMax, countNumerals(tok));
+  }
+
+  // 4) Transform data rows: when placing above, apply leading 'x' padding; below strips them
+  for (let i = headerLineIdx + 1; i < lines.length; i++) {
+    const s = lines[i];
+    if (!s.includes('\t')) continue;
+    const toks = s.split('\t');
+    let tok = toks[fbIndex] || '';
+    if (!tok || tok === '.' || /^[\*\=\!\|]/.test(tok)) { lines[i] = toks.join('\t'); continue; }
+
+    const parts = tok.trim().split(/\s+/);
+    // Normalize any preexisting padding by removing leading x
+    while (parts[0] === 'x') parts.shift();
+
+    if (placeAbove) {
+      const numeralsHere = countNumerals(parts.join(' ')) || 1;
+      const need = Math.max(0, globalMax - Math.max(1, numeralsHere));
+      tok = (need > 0 ? ('x '.repeat(need)) : '') + parts.join(' ');
+      toks[fbIndex] = tok.trim();
+    } else {
+      // below: no padding
+      toks[fbIndex] = parts.join(' ');
+    }
+    lines[i] = toks.join('\t');
+  }
+
+  return lines.join('\n');
+}
+
 // -------------------- Pipeline --------------------
 function runPipelineForEntry(entry, tonic, m){
   const originalAbsolute = entry.text;
@@ -1520,11 +1680,14 @@ function runPipelineForEntry(entry, tonic, m){
   let prepared = entry.text;
   if (ACC_MODE === 'modern') {
     prepared = applyModernOverride(prepared);
-    modeTagline.innerHTML = 'Created for the University of Iowa Organ Studio';
-  } else {
-    modeTagline.innerHTML = 'Created for the University of Iowa Organ Studio';
   }
-  historicalStatus.textContent = `Historical=${ACC_MODE==='historic' ? 'TRUE' : 'FALSE'}`;
+
+  // CHANGE #1: Always show the Boyvin image tagline + a hidden historical span
+  modeTagline.innerHTML =
+    '<img class="tagline-img" src="boyvinsignature.png" alt="Boyvin signature">' +
+    '<span id="historicalStatus" class="visually-hidden"></span>';
+  const hs = document.getElementById('historicalStatus');
+  if (hs) hs.textContent = `Historical=${ACC_MODE==='historic' ? 'TRUE' : 'FALSE'}`;
 
   // Courtesy
   const { text: withCourtesy, conflicts } = applyCourtesyFromSpine4(prepared);
@@ -1549,9 +1712,12 @@ function runPipelineForEntry(entry, tonic, m){
     String(tonic || '').trim(),
     m
   );
-  currentKrn = transformed;
 
-  // Humdrum panel
+  // CHANGE #3: Save pre-placement and apply placement before rendering
+  lastTransformedKrn = transformed;
+  currentKrn = applyFiguredBassPlacement(lastTransformedKrn, FB_ABOVE);
+
+  // Humdrum panel (kept same sections)
   humPanel.textContent = '';
   humPanel.textContent += '## 1) ORIGINAL .krn (absolute source)\n\n';
   humPanel.textContent += originalAbsolute + '\n\n';
@@ -1559,7 +1725,7 @@ function runPipelineForEntry(entry, tonic, m){
   humPanel.textContent += krnSentToVerovio + '\n\n';
   humPanel.textContent += `## TARGET KEY: ${formatKeyName(tonic, m)}\n\n`;
   humPanel.textContent += '## 3) Transpose output (after figure-aware transform)\n\n';
-  humPanel.textContent += currentKrn + '\n\n';
+  humPanel.textContent += lastTransformedKrn + '\n\n';
   humPanel.textContent += `## 4) Historical mode status: Historical=${ACC_MODE==='historic' ? 'TRUE' : 'FALSE'}\n`;
 
   // Remember keys so toggles can act
@@ -1733,14 +1899,54 @@ accRadios.forEach(r => {
     if (currentEntry && lastTargetTonic && lastTargetMode) {
       runPipelineForEntry(currentEntry, lastTargetTonic, lastTargetMode);
     } else {
-      modeTagline.innerHTML = (ACC_MODE === 'modern')
-        ? 'Created for the University of Iowa Organ Studio'
-        : 'Created for the University of Iowa Organ Studio';
-      historicalStatus.textContent = `Historical=${ACC_MODE==='historic' ? 'TRUE' : 'FALSE'}`;
+      // CHANGE #1: Keep image in tagline and refresh hidden status
+      modeTagline.innerHTML =
+        '<img class="tagline-img" src="boyvinsignature.png" alt="Boyvin signature">' +
+        '<span id="historicalStatus" class="visually-hidden"></span>';
+      const hs = document.getElementById('historicalStatus');
+      if (hs) hs.textContent = `Historical=${ACC_MODE==='historic' ? 'TRUE' : 'FALSE'}`;
     }
   });
 });
 updateAccLabelVisuals(); // initialize visual
+
+// -------------------- CHANGE #3: Figured-bass placement radio wiring --------------------
+function updateFigPlaceLabelVisuals() {
+  const fbAbove = document.getElementById('fbAbove');
+  const fbBelow = document.getElementById('fbBelow');
+  const labA = document.getElementById('labelFigAbove');
+  const labB = document.getElementById('labelFigBelow');
+  const above = !!(fbAbove && fbAbove.checked);
+  if (labA) labA.classList.toggle('selected', above);
+  if (labB) labB.classList.toggle('selected', !above);
+}
+
+(function initFigPlacementRadios(){
+  const fbAbove = document.getElementById('fbAbove');
+  const fbBelow = document.getElementById('fbBelow');
+
+  const applyAndRender = () => {
+    FB_ABOVE = !!(fbAbove && fbAbove.checked);
+    updateFigPlaceLabelVisuals();
+
+    // Re-apply placement to the latest transposed KRn and re-render
+    if (lastTransformedKrn) {
+      currentKrn = applyFiguredBassPlacement(lastTransformedKrn, FB_ABOVE);
+      renderWithVerovio(currentKrn, lastTargetTonic || '');
+
+      // Re-run the pipeline so the Humdrum panel stays in sync
+      if (currentEntry && lastTargetTonic && lastTargetMode) {
+        runPipelineForEntry(currentEntry, lastTargetTonic, lastTargetMode);
+      }
+    }
+  };
+
+  if (fbAbove) fbAbove.addEventListener('change', applyAndRender);
+  if (fbBelow) fbBelow.addEventListener('change', applyAndRender);
+
+  // initial visuals
+  updateFigPlaceLabelVisuals();
+})();
 
 // -------------------- Filter button wiring --------------------
 // Utility to toggle a value in a Set and update UI/counts
@@ -1875,41 +2081,7 @@ if (!currentKrn) {
   setStatus('ready — toggle TRACE and click "New Bass Line"');
 }
 
-// Drop-in: insert Boyvin signature immediately to the right of the key pill
-(function insertBoyvinSignature() {
-  const keyPill = document.getElementById('keyPill');
-  if (!keyPill) return;
-
-  // Create wrapper
-  const wrap = document.createElement('div');
-  wrap.id = 'boyvinSig';
-  wrap.className = 'boyvin-signature';
-  // Use root path file name as requested
-  const img = document.createElement('img');
-  img.src = 'boyvinsignature.png';
-  img.alt = "Boyvin signature";
-  wrap.appendChild(img);
-
-  // Insert after keyPill inside title-badges (so it's to the right)
-  keyPill.parentNode.insertBefore(wrap, keyPill.nextSibling);
-
-  // Keep visibility in sync with keyPill (if key pill is hidden, hide signature)
-  function syncVisibility() {
-    // If keyPill is display:none or not visible, hide signature
-    const kpStyle = window.getComputedStyle(keyPill);
-    if (kpStyle && kpStyle.display === 'none') wrap.style.display = 'none';
-    else wrap.style.display = 'inline-block';
-  }
-  syncVisibility();
-
-  // Observe style/class changes on keyPill and re-sync
-  const mo = new MutationObserver(syncVisibility);
-  mo.observe(keyPill, { attributes: true, attributeFilter: ['style', 'class'] });
-
-  // And also sync on window resize (in case layout toggles change visibility)
-  window.addEventListener('resize', syncVisibility);
-})();
-
+// ======= CHANGE #1: REMOVED previous "insertBoyvinSignature()" that put png in upper-right =======
 
 })();
 </script>
