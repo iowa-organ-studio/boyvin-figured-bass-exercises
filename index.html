@@ -221,7 +221,15 @@ header {
   transform: none;
   box-shadow: 0 1px 0 rgba(0,0,0,0.15);
 }
+/* Key pill: bold label, normal-weight value */
+#keyPill .key-label {
+  font-weight: 700;      /* bold "Current key:" */
+  margin-right: 6px;     /* a little space before the key text */
+}
 
+#keyPill #keyPillValue {
+  font-weight: 400;      /* do NOT bold the actual key */
+}
 /* ======= Viewer ======= */
 #viewer{ margin-top:8px; }
 
@@ -430,7 +438,12 @@ header {
   <button id="randomFiltered" class="new-bass-btn" type="button">New Bass Line</button>
   <div class="title-badges" id="titlePills" aria-hidden="false" style="margin-left:6px">
     <div class="title-pill" id="titlePill">No title <small id="titleSub"></small></div>
-    <div class="title-pill" id="keyPill"><span id="keyPillValue">original</span></div>
+    
+<div class="title-pill" id="keyPill">
+  <span class="key-label">Current key:</span>
+  <span id="keyPillValue">original</span>
+</div>
+
   </div>
 
   <!-- Right side: studio credit -->
@@ -2480,3 +2493,4 @@ renderWithVerovio(samplePlaced, '');
 </script>
 </body>
 </html>
+
