@@ -1,7 +1,7 @@
 **kern	**fb	**text	**text
 !!		actual acc.	force diatonic accidental
 !! Title	a minor
-!! Number	3A
+!! Number	3
 *clefF4	*	*	*
 *k	*k	*k	*k
 *M3/4	*M3/4	*M3/4	*M3/4
@@ -171,4 +171,5 @@
 =|	=|	=|	=|
 1AA	.	.	.
 =||	=|	=|	=|
+
 *-	*-	*-	*-
