@@ -1705,16 +1705,35 @@ function uniqueTonicBasesFromMaps(){
   });
 }
 
-function renderIncludeButtons(){
-  const list = uniqueTonicBasesFromMaps();
+// === DROP-IN: ordered include buttons (sharps then flats as requested) ===
+function renderIncludeButtons() {
+  // Desired visual order: C C# Db D D# Eb E F F# Gb G G# Ab A A# Bb B Cb
+  const ordered = ['C','C#','Db','D','D#','Eb','E','F','F#','Gb','G','G#','Ab','A','A#','Bb','B','Cb'];
+
+  if (!includeGridEl) return;
   includeGridEl.innerHTML = '';
-  list.forEach(base => {
+
+  ordered.forEach(tok => {
+    // Normalize the token into the same humdrum base format used elsewhere
+    const norm = normalizeTonicForHumdrum(tok);
+    if (!norm) return;
+    const parsed = parseTonicString(norm);
+    if (!parsed) return;
+
+    // dataset.base must match existing code's "base" format: Letter + (acc or empty)
+    const base = parsed.letter + (parsed.acc === 'n' ? '' : parsed.acc); // e.g. "D#" or "D-"
+    // Avoid creating duplicate buttons if something else already injected them
+    if (Array.from(includeGridEl.querySelectorAll('.include-btn')).some(b => b.dataset.base === base)) return;
+
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'include-btn';
-    const display = base.replace(/--/g,'♭♭').replace(/-/g,'♭').replace(/#/g,'♯');
+    // Display: use Unicode glyphs for friendliness
+    const display = String(tok).replace(/#/g,'♯').replace(/b/g,'♭');
     btn.textContent = display;
     btn.dataset.base = base;
+
+    // same toggle behavior as original renderIncludeButtons()
     btn.addEventListener('click', () => {
       const b = btn.dataset.base;
       if (allowedTonicBases.has(b)) {
@@ -1724,7 +1743,12 @@ function renderIncludeButtons(){
         allowedTonicBases.add(b);
         btn.classList.add('toggled');
       }
+      traceLog && traceLog(`Include button toggled: ${b} => ${allowedTonicBases.has(b) ? 'ON' : 'OFF'}`);
     });
+
+    // If this base is currently selected in allowedTonicBases, reflect that visually
+    if (allowedTonicBases.has(base)) btn.classList.add('toggled');
+
     includeGridEl.appendChild(btn);
   });
 }
@@ -2493,4 +2517,5 @@ renderWithVerovio(samplePlaced, '');
 </script>
 </body>
 </html>
+
 
