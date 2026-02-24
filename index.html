@@ -1714,26 +1714,33 @@ function renderIncludeButtons() {
   includeGridEl.innerHTML = '';
 
   ordered.forEach(tok => {
+    // Normalize source token: convert ASCII 'b' -> hyphen '-' (our parsing helpers accept '-' for flats)
+    // Also accept user-supplied Unicode flat/sharp if present.
+    const tokenForParse = String(tok).replace(/b/g, '-').replace(/\u266d/g, '-').replace(/\u266f/g, '#');
+
     // Normalize the token into the same humdrum base format used elsewhere
-    const norm = normalizeTonicForHumdrum(tok);
+    const norm = normalizeTonicForHumdrum(tokenForParse);
     if (!norm) return;
     const parsed = parseTonicString(norm);
     if (!parsed) return;
 
     // dataset.base must match existing code's "base" format: Letter + (acc or empty)
     const base = parsed.letter + (parsed.acc === 'n' ? '' : parsed.acc); // e.g. "D#" or "D-"
-    // Avoid creating duplicate buttons if something else already injected them
+
+    // Avoid creating duplicate buttons
     if (Array.from(includeGridEl.querySelectorAll('.include-btn')).some(b => b.dataset.base === base)) return;
 
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'include-btn';
-    // Display: use Unicode glyphs for friendliness
+
+    // Display: use Unicode glyphs for friendliness (show ♯ / ♭)
     const display = String(tok).replace(/#/g,'♯').replace(/b/g,'♭');
     btn.textContent = display;
+
     btn.dataset.base = base;
 
-    // same toggle behavior as original renderIncludeButtons()
+    // Toggle behavior
     btn.addEventListener('click', () => {
       const b = btn.dataset.base;
       if (allowedTonicBases.has(b)) {
@@ -1746,7 +1753,7 @@ function renderIncludeButtons() {
       traceLog && traceLog(`Include button toggled: ${b} => ${allowedTonicBases.has(b) ? 'ON' : 'OFF'}`);
     });
 
-    // If this base is currently selected in allowedTonicBases, reflect that visually
+    // Reflect current state
     if (allowedTonicBases.has(base)) btn.classList.add('toggled');
 
     includeGridEl.appendChild(btn);
@@ -2517,5 +2524,6 @@ renderWithVerovio(samplePlaced, '');
 </script>
 </body>
 </html>
+
 
 
