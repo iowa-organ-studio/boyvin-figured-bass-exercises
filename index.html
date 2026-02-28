@@ -1,3 +1,6 @@
+
+
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -2220,13 +2223,26 @@ function humTonicToScoreAscii(tonic, mode) {
   return SCORE_COLS_ASCII.includes(cand) ? cand : null;
 }
 
+// Extract the final exercise number from a title badge, e.g.:
+// "a minor 3b" -> "3b", "1. D minor 1A" -> "1A", "Rule of the Octave 12" -> "12"
+function titleToNumberOnly(badgeText) {
+  const s = String(badgeText || '').trim();
+  // last number with optional letters, allowing a space between number and letter
+  const m = s.match(/(\d+\s*[A-Za-z]+|\d+)\s*$/);
+  if (m) return m[1].replace(/\s+/g, '');
+  return s; // fallback if no number is found
+}
+
 // REPLACE the updater to pass the current mode (uppercase=major, lowercase=minor)
 function updateScoreboardForDrawFromCurrent() {
   const titleNode = document.getElementById('titlePill');
-  const label = titleNode ? String(titleNode.textContent || '').trim() : '';
-  const colKey = humTonicToScoreAscii(lastTargetTonic || '', lastTargetMode || 'major');
-  if (!label || !colKey) return;
-  addScore(label, colKey);
+  const fullBadge = titleNode ? String(titleNode.textContent || '').trim() : '';
+  const shortLabel = titleToNumberOnly(fullBadge);
+
+  const colKey = humTonicToScoreAscii(lastTargetTonic || '', lastTargetMode || 'major'); // uppercase=major, lowercase=minor
+  if (!shortLabel || !colKey) return;
+
+  addScore(shortLabel, colKey);
   renderScoreboard();
 }
 
@@ -2367,7 +2383,8 @@ function renderScoreboard() {
 // Update from current UI state (exact title pill text; current spelled key + mode)
 function updateScoreboardForDrawFromCurrent() {
   const titleNode = document.getElementById('titlePill');
-  const label = titleNode ? String(titleNode.textContent || '').trim() : '';
+  const labelFull = titleNode ? String(titleNode.textContent || '').trim() : '';
+const label = labelFull.split(/\s+/).pop();   // takes final token only
   const colKey = humTonicToScoreAscii(lastTargetTonic || '', lastTargetMode || 'major'); // uppercase=major, lowercase=minor
   if (!label || !colKey) return;
   addScore(label, colKey);
