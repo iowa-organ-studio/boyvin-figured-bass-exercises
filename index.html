@@ -1,6 +1,3 @@
-
-
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -859,32 +856,62 @@ function letterStepsUp(fromLetter, steps){ // steps >= 0
   return order[(i + (steps % 7) + 7) % 7];
 }
 
-// Normalize tonic to Humdrum glyphs ('-', '--', '#', '##', 'n')
+// Normalize tonic to Humdrum glyphs ('-', '--', '#', '##', 'n'),
+// accepting ASCII 'b' and Unicode ♭/♯. Critically: never touch the tonic letter.
 function normalizeTonicForHumdrum(s) {
   if (!s) return s;
+
   const raw = String(s).trim();
-  const m = raw.match(/^([A-Ga-g])([#\u266f-]{0,2})?$/);
-  if (!m) return raw;
-  const letter = m[1];
-  let acc = m[2] || '';
+  // Split the first tonic letter (A..G or a..g) from the trailing accidental chars
+  const m = raw.match(/^([A-Ga-g])(.*)$/);
+  if (!m) return raw; // not a tonic spelling; return as-is
+
+  const letter = m[1];           // 'A'..'G' or 'a'..'g' (case indicates mode)
+  let acc = (m[2] || '');        // everything after the first char is accidental part
+
+  // Normalize the accidental *part* only (never touch the tonic letter)
   acc = acc
-    .replace(/\u266f/g, '#')
-    .replace(/\u266d/g, '-')
-    .replace(/bb/g, '--')
-    .replace(/b/g, '-');
-  return letter + acc;
+    .replace(/\u266f/g, '#')     // Unicode sharp → '#'
+    .replace(/\u266d/g, 'b')     // Unicode flat  → 'b'
+    .replace(/bb/g, '--')        // double flat   → '--'
+    .replace(/b/g, '-')          // single flat   → '-';
+
+  // Validate the accidental part: allow '', '#', '##', '-', '--'
+  if (!/^([#-]{0,2})$/.test(acc)) {
+    // If someone put other junk here, keep the safe cleaned fallback (or empty).
+    acc = acc.replace(/[^#-]/g, '').slice(0, 2);
+  }
+
+  return letter + acc;           // e.g. 'bb' → 'b-' (lowercase b = minor B-flat)
 }
 
-// Parse tonic string "A", "Ab", "C#", returns {letter, acc, mode}
-function parseTonicString(s){
+// Parse "A", "Ab"/"A-", "C#", "bb" (B♭ minor) → {letter, acc, mode}
+function parseTonicString(s) {
   if (!s) return null;
-  const m = String(s).trim().match(/^([A-Ga-g])([#\u266f-]{0,2})$/);
+
+  const raw = String(s).trim();
+  const m = raw.match(/^([A-Ga-g])(.*)$/);
   if (!m) return null;
-  let letter = m[1].toUpperCase();
-  let acc = (m[2] || '') || 'n';
-  acc = acc.replace(/\u266f/g, '#');
-  if (acc === '') acc = 'n';
-  return { letter, acc, mode: (m[1] === m[1].toLowerCase() ? 'minor' : 'major') };
+
+  const letterRaw = m[1];
+  const accRaw = m[2] || '';
+
+  // Only process the accidental part
+  const accNorm = accRaw
+    .replace(/\u266f/g, '#')
+    .replace(/\u266d/g, 'b')
+    .replace(/bb/g, '--')
+    .replace(/b/g, '-');
+
+  // Validate accidental part; default to 'n' if empty
+  const acc = accNorm.length ? accNorm : 'n';
+  if (!/^([#-]{0,2}|n)$/.test(acc)) return null;
+
+  return {
+    letter: letterRaw.toUpperCase(),                               // 'A'..'G'
+    acc,                                                           // '--' | '-' | 'n' | '#' | '##'
+    mode: (letterRaw === letterRaw.toLowerCase() ? 'minor' : 'major')
+  };
 }
 
 function spelledToSemitone(letter, glyph){
