@@ -1,5 +1,3 @@
-
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -427,6 +425,57 @@ header {
   max-width: 58%;      /* slightly smaller inside the card */
 }
 
+/* ===== Scoreboard ===== */
+
+/* keep the outer scroller at full width */
+#scoreboard > div[style*="overflow-x"] { width: 100%; }
+
+/* do NOT stretch the table to the card width; respect column widths */
+#scoreTable {
+  border-collapse: collapse;
+  table-layout: fixed;     /* use col/colgroup widths */
+  width: max-content;      /* total width = sum of columns (scroll if too wide) */
+  max-width: none;         /* never clamp to the container width */
+}
+
+#scoreTable th, #scoreTable td {
+  border: 1px solid var(--border);
+  padding: 4px 6px;
+  font-size: .82rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+#scoreTable thead th { background: var(--card); }
+
+/* First column appearance (width comes from <colgroup>, NOT here) */
+#scoreTable th:first-child,
+#scoreTable td:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  font-weight: 700;
+}
+
+/* Totals row + totals column italic */
+#scoreTable tr.totals-row th,
+#scoreTable tr.totals-row td,
+#scoreTable th.totals-col,
+#scoreTable td.totals-col {
+  font-style: italic;
+}
+
+/* (Optional) as a belt‑and‑suspenders, ensure the colgroup widths are honored */
+#scoreTable col:first-child        { width: 12rem !important; max-width: 12rem !important; }
+#scoreTable col:nth-child(2)       { width: 4.5rem !important; max-width: 4.5rem !important; }
+#scoreTable col:nth-child(n+3)     { width: 2.4rem !important; max-width: 2.4rem !important; }
+
+/* Optional: reuse your existing toggle pill look for the Scoreboard chevron button */
+.humdrum-toggle { display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--border);
+  color:#333;border-radius:10px;padding:6px 10px;font-size:.92rem;font-weight:600;cursor:pointer;margin-top:8px }
+.humdrum-chevron{ font-weight:800;color:#555 }
+
 </style>
 </head>
 <body>
@@ -548,7 +597,7 @@ header {
     </div>
 
     <div class="group" data-role="accidentals">
-      <div class="small" style="min-width:88px">Accidentals:</div>
+      <div class="small" style="min-width:88px">Figure style:</div>
       <div class="radio-inline" id="accRadioInline">
         <label id="labelHistoric"><input type="radio" name="accMode" value="historic" checked> Historic</label>
         <label id="labelModern"><input type="radio" name="accMode" value="modern"> Modern</label>
@@ -576,6 +625,8 @@ header {
       <div class="include-grid" id="includeGrid" aria-label="Spelled tonics to include (select to restrict)"></div>
     </div>
 
+
+
     <!-- CHANGE #3: Figures placement controls -->
     <div class="group" data-role="fig-place" style="align-self:flex-start; min-width:auto;">
       <div class="small">Figures</div>
@@ -586,6 +637,19 @@ header {
 </div>
     </div>
   </div>
+
+<!-- ===== Scoreboard ===== -->
+<div id="scoreboard" class="card" style="margin-top:8px">
+  <div class="row">
+    <div class="small">Scoreboard (keys × titles drawn)</div>
+    <div class="spacer"></div>
+    <button id="scoreReset" class="btn" type="button">Reset</button>
+  </div>
+
+  <div style="overflow-x:auto; margin-top:6px">
+    <table id="scoreTable" aria-label="Scoreboard of keys vs titles"><!-- header and rows injected by JS --></table>
+  </div>
+</div>
 
  <!-- ===== Humdrum panel (hidden) =====
 <label class="small" style="margin-top:8px;display:block">
@@ -2122,6 +2186,246 @@ humAppend(`## 4) Historical mode status: Historical=${ACC_MODE==='historic' ? 'T
   renderWithVerovio(currentKrn, tonic);
 }
 
+// ===== SCOREBOARD (keys × titles) =====
+
+// REPLACE the previous SCORE_COLS_ASCII with this exact order (glyphs will render in header)
+const SCORE_COLS_ASCII = [
+  'C','G','D','A','E','B','F#','C#','F','Bb','Eb','Ab','Db','Gb','Cb',
+  'a','e','b','f#','c#','g#','d#','a#','d','g','c','f','bb','eb','ab'
+];
+
+// In-memory state: Map<titleLabel, Map<colKey, count>>
+const scoreState = new Map();
+
+function asciiKeyToGlyph(k) {
+  const letter = k.charAt(0);
+  const rest = k.slice(1);
+  return letter + rest.replace(/#/g,'♯').replace(/b/g,'♭');
+}
+
+// REPLACE humTonicToScoreAsciiSimple with this mode-aware version
+function humTonicToScoreAscii(tonic, mode) {
+  if (!tonic) return null;
+  const t = String(tonic).trim()
+    .replace(/--/g,'bb')
+    .replace(/-/g,'b')
+    .replace(/\u266d/g,'b')
+    .replace(/\u266f/g,'#');
+
+  const letter = t.charAt(0);
+  const acc = t.slice(1);
+  const isMinor = (String(mode).toLowerCase() === 'minor');
+
+  const cand = (isMinor ? letter.toLowerCase() : letter.toUpperCase()) + acc;
+  return SCORE_COLS_ASCII.includes(cand) ? cand : null;
+}
+
+// REPLACE the updater to pass the current mode (uppercase=major, lowercase=minor)
+function updateScoreboardForDrawFromCurrent() {
+  const titleNode = document.getElementById('titlePill');
+  const label = titleNode ? String(titleNode.textContent || '').trim() : '';
+  const colKey = humTonicToScoreAscii(lastTargetTonic || '', lastTargetMode || 'major');
+  if (!label || !colKey) return;
+  addScore(label, colKey);
+  renderScoreboard();
+}
+
+function initScoreboard() {
+  const tbl = document.getElementById('scoreTable');
+  if (!tbl) return;
+  tbl.innerHTML = '';
+
+  // --- colgroup with explicit widths ---
+  const colgroup = document.createElement('colgroup');
+
+  // First column (Title) — clamp hard
+  const colTitle = document.createElement('col');
+  colTitle.style.width = '12rem';     // adjust to taste (e.g., 10–14rem)
+  colTitle.style.maxWidth = '12rem';
+  colgroup.appendChild(colTitle);
+
+  // Second column (totals) — modest width
+  const colTotals = document.createElement('col');
+  colTotals.style.width = '4.5rem';   // enough for double-digit totals
+  colTotals.style.maxWidth = '4.5rem';
+  colgroup.appendChild(colTotals);
+
+  // Key columns (uniform narrow width)
+  for (let i = 0; i < SCORE_COLS_ASCII.length; i++) {
+    const c = document.createElement('col');
+    c.style.width = '2.4rem';         // ~38px @ default font-size
+    c.style.maxWidth = '2.4rem';
+    colgroup.appendChild(c);
+  }
+
+  tbl.appendChild(colgroup);
+
+  // --- header ---
+  const thead = document.createElement('thead');
+  const trh = document.createElement('tr');
+
+  const th0 = document.createElement('th');
+  th0.textContent = 'Title';
+  th0.style.textAlign = 'left';
+  trh.appendChild(th0);
+
+  const thTotals = document.createElement('th');
+  thTotals.textContent = 'totals';
+  thTotals.className = 'totals-col';
+  trh.appendChild(thTotals);
+
+  for (const col of SCORE_COLS_ASCII) {
+    const th = document.createElement('th');
+    th.textContent = asciiKeyToGlyph(col);
+    trh.appendChild(th);
+  }
+  thead.appendChild(trh);
+
+  const tbody = document.createElement('tbody');
+  tbody.id = 'scoreBody';
+
+  tbl.appendChild(thead);
+  tbl.appendChild(tbody);
+}
+
+function addScore(rowLabel, colKey) {
+  if (!rowLabel || !colKey) return;
+  if (!scoreState.has(rowLabel)) scoreState.set(rowLabel, new Map());
+  const rowMap = scoreState.get(rowLabel);
+  rowMap.set(colKey, (rowMap.get(colKey) || 0) + 1);
+}
+
+function renderScoreboard() {
+  const tbody = document.getElementById('scoreBody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  const labels = Array.from(scoreState.keys()).sort((a,b) => a.localeCompare(b));
+
+  const colTotals = new Map(SCORE_COLS_ASCII.map(k => [k, 0]));
+  const rowTotals = new Map();
+
+  for (const label of labels) {
+    const rowMap = scoreState.get(label) || new Map();
+    let rSum = 0;
+    for (const col of SCORE_COLS_ASCII) {
+      const v = rowMap.get(col) || 0;
+      rSum += v;
+      colTotals.set(col, (colTotals.get(col) || 0) + v);
+    }
+    rowTotals.set(label, rSum);
+  }
+
+  // Totals row (second row of the table, right under header)
+  const trTotals = document.createElement('tr');
+  trTotals.className = 'totals-row';
+
+  const tdLabel = document.createElement('td');
+  tdLabel.textContent = 'totals';
+  trTotals.appendChild(tdLabel);
+
+  const tdGrand = document.createElement('td');
+  tdGrand.textContent = '';
+  tdGrand.className = 'totals-col';
+  trTotals.appendChild(tdGrand);
+
+  for (const col of SCORE_COLS_ASCII) {
+    const td = document.createElement('td');
+    const v = colTotals.get(col) || 0;
+    td.textContent = v ? String(v) : '';
+    trTotals.appendChild(td);
+  }
+  tbody.appendChild(trTotals);
+
+  // Title rows (second column holds per-row totals, italic via CSS class)
+  for (const label of labels) {
+    const tr = document.createElement('tr');
+
+    const tdL = document.createElement('td');
+    tdL.textContent = label;
+    tr.appendChild(tdL);
+
+    const tdRowTotal = document.createElement('td');
+    const rSum = rowTotals.get(label) || 0;
+    tdRowTotal.textContent = rSum ? String(rSum) : '';
+    tdRowTotal.className = 'totals-col';
+    tr.appendChild(tdRowTotal);
+
+    const rowMap = scoreState.get(label) || new Map();
+    for (const col of SCORE_COLS_ASCII) {
+      const td = document.createElement('td');
+      const v = rowMap.get(col) || 0;
+      td.textContent = v ? String(v) : '';
+      tr.appendChild(td);
+    }
+
+    tbody.appendChild(tr);
+  }
+}
+
+// Update from current UI state (exact title pill text; current spelled key)
+// Update from current UI state (exact title pill text; current spelled key + mode)
+function updateScoreboardForDrawFromCurrent() {
+  const titleNode = document.getElementById('titlePill');
+  const label = titleNode ? String(titleNode.textContent || '').trim() : '';
+  const colKey = humTonicToScoreAscii(lastTargetTonic || '', lastTargetMode || 'major'); // uppercase=major, lowercase=minor
+  if (!label || !colKey) return;
+  addScore(label, colKey);
+  renderScoreboard();
+}
+
+
+// Reset and collapsible toggle
+(function wireScoreboardUI(){
+  initScoreboard();
+  renderScoreboard();
+
+  const resetBtn = document.getElementById('scoreReset');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      scoreState.clear();
+      renderScoreboard();
+    });
+  }
+
+  const panel = document.getElementById('scoreboard');
+  if (panel) {
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'humdrum-toggle';
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.setAttribute('aria-controls', 'scoreboard');
+
+    const chev = document.createElement('span');
+    chev.className = 'humdrum-chevron';
+    chev.textContent = '►';
+
+    const txt = document.createElement('span');
+    txt.textContent = 'Scoreboard — click to open';
+
+    toggle.appendChild(chev);
+    toggle.appendChild(txt);
+
+    panel.parentNode.insertBefore(toggle, panel);
+    panel.style.display = 'none';
+
+    toggle.addEventListener('click', () => {
+      const isOpen = panel.style.display !== 'none';
+      if (isOpen) {
+        panel.style.display = 'none';
+        toggle.setAttribute('aria-expanded', 'false');
+        chev.textContent = '►';
+        txt.textContent = 'Scoreboard — click to open';
+      } else {
+        panel.style.display = 'block';
+        toggle.setAttribute('aria-expanded', 'true');
+        chev.textContent = '▼';
+        txt.textContent = 'Scoreboard — click to close';
+      }
+    });
+  }
+})();
+
 // -------------------- Sample / Random --------------------
 const sample = `**kern\t**fb\t**text\t**text
 !!\t\tactual acc.\tforce diatonic accidental
@@ -2439,6 +2743,7 @@ randomBtn.addEventListener('click', async () => {
   updatePillsFromCatalogEntry(pick);
   updateKeyPill(tonic || '', m);
   runPipelineForEntry(pick, tonic, m);
+  updateScoreboardForDrawFromCurrent();
 });
 
 // -------------------- Scale / Spacing wiring --------------------
