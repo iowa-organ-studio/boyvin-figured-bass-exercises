@@ -1810,7 +1810,7 @@ function renderIncludeButtons() {
   ordered.forEach(tok => {
     // Normalize source token: convert ASCII 'b' -> hyphen '-' (our parsing helpers accept '-' for flats)
     // Also accept user-supplied Unicode flat/sharp if present.
-    const tokenForParse = String(tok).replace(/b/g, '-').replace(/\u266d/g, '-').replace(/\u266f/g, '#');
+    const tokenForParse = normalizeTonicForHumdrum(String(tok));
 
     // Normalize the token into the same humdrum base format used elsewhere
     const norm = normalizeTonicForHumdrum(tokenForParse);
@@ -1882,39 +1882,23 @@ if (includeSelectNoneBtn) {
   });
 }
 
+function includeGridIsAllSelected() {
+  if (!includeGridEl) return false;
+  const btns = Array.from(includeGridEl.querySelectorAll('.include-btn'));
+  return btns.length > 0 && btns.every(b => allowedTonicBases.has(b.dataset.base));
+}
+
 // -------------------- Effective allowed tonics (updated) --------------------
 function getEffectiveAllowedTonicsForMode(mode){
-  // If the user selected spelled tonics, filter allowed tonics by these bases.
   const allowedByCount = buildAllowedTonicsForMode(mode);
-  if (allowedTonicBases.size === 0) return allowedByCount;
 
-  const out = [];
-  // Prepare allowed base specs: {letter, accOrEmpty}
-  const allowedSpecs = Array.from(allowedTonicBases).map(b => {
-    const letter = b[0].toUpperCase();
-    const acc = b.length > 1 ? b.slice(1) : '';
-    return {letter, acc};
-  });
-
-  for (const t of allowedByCount){
-    const n = normalizeTonicForHumdrum(t);
-    const p = parseTonicString(n);
-    if (!p) continue;
-    const candLetter = p.letter; // uppercase
-    const candAcc = p.acc === 'n' ? '' : p.acc; // '' | '#' | '-'
-    // If any allowedSpec matches this candidate:
-    for (const spec of allowedSpecs){
-      if (candLetter !== spec.letter) continue;
-      const specAcc = spec.acc; // '' | '#' | '-'
-      if (specAcc === '') {
-        if (candAcc === '') { out.push(t); break; }
-      } else {
-        if (candAcc === specAcc) { out.push(t); break; }
-      }
-    }
+  // If user has not restricted Include, or has literally selected everything,
+  // do not apply an include-based filter at all.
+  if (allowedTonicBases.size === 0 || includeGridIsAllSelected()) {
+    return allowedByCount;
   }
 
-  return out;
+  // ... keep your existing filter code below ...
 }
 
 // -------------------- Rendering --------------------
@@ -2873,6 +2857,5 @@ renderWithVerovio(samplePlaced, '');
 </script>
 </body>
 </html>
-
 
 
