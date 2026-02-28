@@ -1,7 +1,7 @@
 **kern	**fb	**text	**text
 !!		actual acc.	force diatonic accidental
 !! Title	C minor
-!! Number	7a
+!! Number	7
 *clefF4	*	*	*
 *k[b-e-a-]	*k[b-e-a-]	*k[b-e-a-]	*k[b-e-a-]
 *met(c|)	*met(c|)	*met(c|)	*met(c|)
@@ -156,6 +156,6 @@
 .	n 7	7 n	.
 =|	=|	=|	=|
 1CC	.	.	.
-=|	=|	=|	=|
-
+=||	=||	=||	=||
 *-	*-	*-	*-
+
