@@ -915,6 +915,42 @@ function parseTonicString(s) {
   };
 }
 
+// Robustly extract the last spelled pitch (letter + up to two accidentals)
+// from a token such as "8AL", "4BB-J", "2c#.", "16G##x", etc.
+// Returns { letter: 'A'..'G', acc: '--' | '-' | 'n' | '#' | '##' } or null.
+function extractSpelledBass(token) {
+  if (!token) return null;
+  const str = String(token);
+
+  // Accept ASCII and Unicode accidentals; allow 0..2 accidentals.
+  // We'll find all occurrences and keep the last one.
+  const accGroup = '(?:#{1,2}|\\u266f{1,2}|b{1,2}|\\u266d{1,2}|-{1,2})?';
+  const re = new RegExp('([A-Ga-g])' + accGroup, 'g');
+
+  let m;
+  let last = null;
+  while ((m = re.exec(str)) !== null) {
+    last = { letter: m[1], accRaw: (m[0].slice(1) || '') };
+  }
+  if (!last) return null;
+
+  // Normalize accidental glyphs into your internal humdrum form:
+  let acc = String(last.accRaw)
+    .replace(/\u266f/g, '#')   // Unicode sharp -> '#'
+    .replace(/\u266d/g, 'b')   // Unicode flat  -> 'b'
+    .replace(/bb/g, '--')      // double-flat
+    .replace(/b/g, '-')        // single-flat
+    .replace(/#/g, '#');       // keep sharps
+
+  if (!acc) acc = 'n';
+  // Accept only allowed glyphs, otherwise fallback to 'n'
+  if (!/^(--|##|#|-|n)$/.test(acc)) acc = 'n';
+
+  return { letter: last.letter.toUpperCase(), acc };
+}
+
+
+  
 function spelledToSemitone(letter, glyph){
   const base = BASE_PITCH[letter.toUpperCase()];
   const off = (ACC_OFF[glyph] !== undefined) ? ACC_OFF[glyph] : 0;
@@ -1235,12 +1271,11 @@ function applyCourtesyFromSpine4(krnText){
     const f0 = (fields[0]||'').trim();
     const isData = (tok) => tok && tok !== '.' && !tok.startsWith('*') && !tok.startsWith('=');
     if (isData(f0)) {
-      const m = f0.match(/([A-Ga-g])([#\u266f-]{0,2})$/);
-      if (m) {
-        const letter = m[1].toUpperCase();
-        const accraw = (m[2]||'') || 'n';
-        lastBass = { letter, acc: accraw, semitone: spelledToSemitone(letter, accraw) };
+      const bass = extractSpelledBass(f0);
+      if (bass) {
+      lastBass = { letter: bass.letter, acc: bass.acc, semitone: spelledToSemitone(bass.letter, bass.acc) };
       }
+
     }
     if (fields.length >= 4 && origKey && lastBass) {
       const s3 = (fields[2] ?? '').trim();
@@ -1323,13 +1358,13 @@ function resolveQInSpine2(krnText, targetTonic, targetMode){
     // Track last bass (original spelled bass on this row)
     const f0 = (fields[0]||'').trim();
     if (isData(f0)) {
-      const stripped = String(f0).replace(/^[0-9]+[\.]*/,'').replace(/[^A-Ga-g#\u266f\-b]*$/,'');
-      const m = stripped.match(/([A-Ga-g])([#\u266f\-b]{0,2})$/);
-      if (m) {
-        const letter = m[1].toUpperCase();
-        const accraw = (m[2]||'').replace(/bb/g,'--').replace(/b/g,'-').replace(/\u266f/g,'#') || 'n';
-        lastBass = { letter, acc: accraw, semitone: spelledToSemitone(letter, accraw) };
+      // Use robust extractor (it internally tolerates leading duration digits, trailing flags, etc.)
+      const bass = extractSpelledBass(f0);
+      if (bass) {
+      const accNorm = bass.acc.replace(/bb/g,'--').replace(/b/g,'-').replace(/\u266f/g,'#');
+      lastBass = { letter: bass.letter, acc: accNorm || 'n', semitone: spelledToSemitone(bass.letter, accNorm || 'n') };
       }
+
     }
 
     // Resolve q / Nq in spine-2 using *transposed spelled bass*
@@ -1415,12 +1450,11 @@ function transformFiguresForTonicWithTrace(originalKrn, targetTonic, targetMode)
     // Bass from spine-1 (original spelled bass)
     const f0 = (fields[0]||'').trim();
     if (f0 && f0 !== '.' && !f0.startsWith('*') && !f0.startsWith('=')) {
-      const m = f0.match(/([A-Ga-g])([#\u266f-]{0,2})$/);
-      if (m) {
-        const letter = m[1].toUpperCase();
-        const accraw = (m[2]||'') || 'n';
-        lastBass = { letter, acc: accraw, semitone: spelledToSemitone(letter, accraw) };
+     const bass = extractSpelledBass(f0);
+    if (bass) {
+      lastBass = { letter: bass.letter, acc: bass.acc || 'n', semitone: spelledToSemitone(bass.letter, bass.acc || 'n') };
       }
+
     }
 
     // Target spelled bass via *spelled* interval (always try to compute)
