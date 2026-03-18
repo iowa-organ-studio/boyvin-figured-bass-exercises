@@ -1,0 +1,29 @@
+**kern	**fb	**text	**text
+!!		actual acc.	force diatonic accidental
+!! Title	F minor
+!! Number	12i
+*clefF4	*	*	*
+*k[b-e-a-d-]	*k[b-e-a-d-]	*k[b-e-a-d-]	*k[b-e-a-d-]
+*met(c)	*met(c)	*met(c)	*met(c)
+*f:	*f:	*f:	*f:
+=1	=1	=1	=1
+4F	6	.	.
+=1|	=1	=1	=1
+2E-	7	.	.
+.	6 4	.	.
+2D-X	7	.	.
+.	6	.	.
+=1|	=1	=1	=1
+2C	7 n	.	.
+.	6 4	.	.
+2BB-	7	.	.
+.	6	.	.
+=1|	=1	=1	=1
+2C	n 7	7 n	.
+.	4 6	6 4	.
+2CC	4 5	5 4	.
+.	n	.	.
+=1|	=1	=1	=1
+1FF	n	.	.
+=1||	=1	=1	=1
+*-	*-	*-	*-
