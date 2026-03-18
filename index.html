@@ -1665,33 +1665,43 @@ async function fetchText(path){
   return { path: p, text: t };
 }
 
-function metaFromHeader(krn){
-  const lines = krn.split(/\r?\n/).slice(0, 120);
-  let dir = null, diff = null, title = null, mode = null, rawNumber = null;
-  for (const ln of lines){
-    const s = (ln||'').trim();
-    if (!s || !s.startsWith('!!')) continue;
-    const titleMatch = s.match(/^!!\s*(?:Title|T)\s+(.*)$/i);
-    if (titleMatch && titleMatch[1] && !title){
-      title = titleMatch[1].trim();
-      continue;
-    }
-    const numMatch = s.match(/^!!\s*Number\s+(.+)$/i);
-    if (numMatch && numMatch[1]){
-      rawNumber = numMatch[1].trim();
+// ======= Safe, simple metaFromHeader (drop-in replacement) =======
+function metaFromHeader(krn) {
+  if (typeof krn !== 'string') {
+    return { dir: null, mode: null, diff: null, title: null, rawNumber: null };
+  }
 
-      // --- NEW: capture the full integer (supports multi-digit numbers like "11", "202")
-      const digits = rawNumber.match(/(\d+)/);
-      if (digits) {
-        diff = parseInt(digits[1], 10);   // e.g. "11e" -> 11
-      } else {
-        diff = null;
-      }
+  const lines = krn.split(/\r?\n/).slice(0, 120);
+  let dir = null;
+  let diff = null;
+  let title = null;
+  let mode = null;
+  let rawNumber = null;
+
+  for (let i = 0; i < lines.length; i++) {
+    const s = (lines[i] || '').trim();
+    if (!s || !s.startsWith('!!')) continue;
+
+    // Title
+    let m = s.match(/^!!\s*(?:Title|T)\s+(.*)$/i);
+    if (m && m[1] && !title) {
+      title = m[1].trim();
       continue;
     }
-    const dirLine = s.match(/^!!\s*Dir\b(.*)$/i);
-    if (dirLine){
-      const rest = dirLine[1];
+
+    // Number: preserve raw text and extract the first contiguous digits (supports "11e", "202b", etc.)
+    m = s.match(/^!!\s*Number\s+(.+)$/i);
+    if (m && m[1]) {
+      rawNumber = String(m[1]).trim();
+      const digits = rawNumber.match(/(\d+)/);
+      diff = digits ? parseInt(digits[1], 10) : null;
+      continue;
+    }
+
+    // Dir line: optional; may contain "major/minor" or "ascending/descending"
+    m = s.match(/^!!\s*Dir\b(.*)$/i);
+    if (m) {
+      const rest = m[1] || '';
       if (/ascending/i.test(rest)) dir = 'ascending';
       if (/descending/i.test(rest)) dir = 'descending';
       if (/major/i.test(rest)) mode = 'major';
@@ -1699,10 +1709,15 @@ function metaFromHeader(krn){
       continue;
     }
   }
+
+  // If mode still unknown, try to infer from explicit key token like "*B-:" (uppercase -> major, lowercase -> minor)
   if (!mode) {
-    const m = krn.match(/^\*([A-Ga-g])([#\u266f-]?)\s*:/m);
-    if (m) mode = (m[1] === m[1].toUpperCase()) ? 'major' : 'minor';
+    const km = krn.match(/^\*([A-Ga-g])([#\u266f-]{0,2})\s*:/m);
+    if (km && km[1]) {
+      mode = (km[1] === km[1].toUpperCase()) ? 'major' : 'minor';
+    }
   }
+
   return { dir, mode, diff, title, rawNumber };
 }
 
