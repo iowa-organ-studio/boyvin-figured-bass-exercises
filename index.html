@@ -1665,8 +1665,6 @@ async function fetchText(path){
   return { path: p, text: t };
 }
 
-// metaFromHeader: now captures rawNumber string (full token after "!! Number")
-// 'diff' is the numeric first digit if present (used for level)
 function metaFromHeader(krn){
   const lines = krn.split(/\r?\n/).slice(0, 120);
   let dir = null, diff = null, title = null, mode = null, rawNumber = null;
@@ -1681,9 +1679,14 @@ function metaFromHeader(krn){
     const numMatch = s.match(/^!!\s*Number\s+(.+)$/i);
     if (numMatch && numMatch[1]){
       rawNumber = numMatch[1].trim();
-      // diff is first digit found (if any)
-      const firstDigit = rawNumber.match(/\d/);
-      if (firstDigit) diff = parseInt(firstDigit[0], 10);
+
+      // --- NEW: capture the full integer (supports multi-digit numbers like "11", "202")
+      const digits = rawNumber.match(/(\d+)/);
+      if (digits) {
+        diff = parseInt(digits[1], 10);   // e.g. "11e" -> 11
+      } else {
+        diff = null;
+      }
       continue;
     }
     const dirLine = s.match(/^!!\s*Dir\b(.*)$/i);
@@ -1703,26 +1706,6 @@ function metaFromHeader(krn){
   return { dir, mode, diff, title, rawNumber };
 }
 
-async function buildCatalog(paths, concurrency=4){
-  catalog = [];
-  let i = 0;
-  const results = [];
-  async function worker(){
-    while (i < paths.length){
-      const idx = i++;
-      const raw = paths[idx];
-      if (!/\.(krn|hum|txt)$/i.test(raw)) continue;
-      try {
-        const { path, text } = await fetchText(raw);
-        const meta = metaFromHeader(text);
-        results.push({ path, dir: meta.dir, mode: meta.mode, diff: meta.diff, title: meta.title, rawNumber: meta.rawNumber, text });
-      } catch(e){ /* skip */ }
-    }
-  }
-  await Promise.all(Array.from({length:concurrency}, worker));
-  catalog = results;
-  updateMatchCount();
-}
 
 function pickRandom(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
 
