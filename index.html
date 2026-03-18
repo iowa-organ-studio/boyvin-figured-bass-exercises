@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -1665,43 +1666,30 @@ async function fetchText(path){
   return { path: p, text: t };
 }
 
-// ======= Safe, simple metaFromHeader (drop-in replacement) =======
-function metaFromHeader(krn) {
-  if (typeof krn !== 'string') {
-    return { dir: null, mode: null, diff: null, title: null, rawNumber: null };
-  }
-
+// metaFromHeader: now captures rawNumber string (full token after "!! Number")
+// 'diff' is the numeric first digit if present (used for level)
+function metaFromHeader(krn){
   const lines = krn.split(/\r?\n/).slice(0, 120);
-  let dir = null;
-  let diff = null;
-  let title = null;
-  let mode = null;
-  let rawNumber = null;
-
-  for (let i = 0; i < lines.length; i++) {
-    const s = (lines[i] || '').trim();
+  let dir = null, diff = null, title = null, mode = null, rawNumber = null;
+  for (const ln of lines){
+    const s = (ln||'').trim();
     if (!s || !s.startsWith('!!')) continue;
-
-    // Title
-    let m = s.match(/^!!\s*(?:Title|T)\s+(.*)$/i);
-    if (m && m[1] && !title) {
-      title = m[1].trim();
+    const titleMatch = s.match(/^!!\s*(?:Title|T)\s+(.*)$/i);
+    if (titleMatch && titleMatch[1] && !title){
+      title = titleMatch[1].trim();
       continue;
     }
-
-    // Number: preserve raw text and extract the first contiguous digits (supports "11e", "202b", etc.)
-    m = s.match(/^!!\s*Number\s+(.+)$/i);
-    if (m && m[1]) {
-      rawNumber = String(m[1]).trim();
-      const digits = rawNumber.match(/(\d+)/);
-      diff = digits ? parseInt(digits[1], 10) : null;
+    const numMatch = s.match(/^!!\s*Number\s+(.+)$/i);
+    if (numMatch && numMatch[1]){
+      rawNumber = numMatch[1].trim();
+      // diff is first digit found (if any)
+      const firstDigit = rawNumber.match(/\d/);
+      if (firstDigit) diff = parseInt(firstDigit[0], 10);
       continue;
     }
-
-    // Dir line: optional; may contain "major/minor" or "ascending/descending"
-    m = s.match(/^!!\s*Dir\b(.*)$/i);
-    if (m) {
-      const rest = m[1] || '';
+    const dirLine = s.match(/^!!\s*Dir\b(.*)$/i);
+    if (dirLine){
+      const rest = dirLine[1];
       if (/ascending/i.test(rest)) dir = 'ascending';
       if (/descending/i.test(rest)) dir = 'descending';
       if (/major/i.test(rest)) mode = 'major';
@@ -1709,18 +1697,33 @@ function metaFromHeader(krn) {
       continue;
     }
   }
-
-  // If mode still unknown, try to infer from explicit key token like "*B-:" (uppercase -> major, lowercase -> minor)
   if (!mode) {
-    const km = krn.match(/^\*([A-Ga-g])([#\u266f-]{0,2})\s*:/m);
-    if (km && km[1]) {
-      mode = (km[1] === km[1].toUpperCase()) ? 'major' : 'minor';
-    }
+    const m = krn.match(/^\*([A-Ga-g])([#\u266f-]?)\s*:/m);
+    if (m) mode = (m[1] === m[1].toUpperCase()) ? 'major' : 'minor';
   }
-
   return { dir, mode, diff, title, rawNumber };
 }
 
+async function buildCatalog(paths, concurrency=4){
+  catalog = [];
+  let i = 0;
+  const results = [];
+  async function worker(){
+    while (i < paths.length){
+      const idx = i++;
+      const raw = paths[idx];
+      if (!/\.(krn|hum|txt)$/i.test(raw)) continue;
+      try {
+        const { path, text } = await fetchText(raw);
+        const meta = metaFromHeader(text);
+        results.push({ path, dir: meta.dir, mode: meta.mode, diff: meta.diff, title: meta.title, rawNumber: meta.rawNumber, text });
+      } catch(e){ /* skip */ }
+    }
+  }
+  await Promise.all(Array.from({length:concurrency}, worker));
+  catalog = results;
+  updateMatchCount();
+}
 
 function pickRandom(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
 
