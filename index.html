@@ -1679,14 +1679,15 @@ function metaFromHeader(krn){
       title = titleMatch[1].trim();
       continue;
     }
-    const numMatch = s.match(/^!!\s*Number\s+(.+)$/i);
-    if (numMatch && numMatch[1]){
-      rawNumber = numMatch[1].trim();
-      // diff is first digit found (if any)
-      const firstDigit = rawNumber.match(/\d/);
-      if (firstDigit) diff = parseInt(firstDigit[0], 10);
-      continue;
-    }
+  const numMatch = s.match(/^!!\s*Number\s+(.+)$/i);
+
+if (numMatch && numMatch[1]) {
+  rawNumber = numMatch[1].trim();
+
+  // FIX: capture full leading digits (e.g., "11k" → 11)
+  const fullNumber = rawNumber.match(/^\d+/);
+  diff = fullNumber ? parseInt(fullNumber[0], 10) : null;
+}
     const dirLine = s.match(/^!!\s*Dir\b(.*)$/i);
     if (dirLine){
       const rest = dirLine[1];
