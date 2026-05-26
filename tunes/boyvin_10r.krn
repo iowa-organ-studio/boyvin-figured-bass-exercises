@@ -1,0 +1,20 @@
+**kern	**fb	**text	**text
+!!		actual acc.	force diatonic accidental
+!! Title	A major
+!! Number	10r
+*clefF4	*	*	*
+*k[f#c#g#]	*k[f#c#g#]	*k[f#c#g#]	*k[f#c#g#]
+*met(c)	*met(c)	*met(c)	*met(c)
+*A:	*A:	*A:	*A:
+=1	=	=	=
+4E#	6	.	.
+=2	=	=	=
+4F#	.	.	.
+4FF#	.	.	.
+4F#	6	.	.
+4E	6	.	.
+=2	=	=	=
+2D	7 #	.	.
+.	6 4	.	.
+4C#	#	.	.
+*-	*-	*-	*-
