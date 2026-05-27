@@ -1,14 +1,15 @@
 **kern	**fb	**text	**text
 !!		actual acc.	force diatonic accidental
 !! Title	D major
-!! Number	8h
+!! Number	08h
+!! Difficulty 2
 *clefF4	*	*	*
 *k[f#c#]	*k[f#c#]	*k[f#c#]	*k[f#c#]
 *met(c)	*met(c)	*met(c)	*met(c)
 *D:	*D:	*D:	*D:
 =1	=1	=1	=1
 4E	.	.	.
-4D	#4	.	.
+4D	4|/	.	.
 8CnL	6	.	.
 8BBJ	6/	6#	.
 =|	=|	=|	=|
