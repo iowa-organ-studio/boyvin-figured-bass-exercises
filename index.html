@@ -193,6 +193,15 @@ gtag('config', 'G-YKGZCSRPSL');
       line-height: 1
     }
 
+    /* Wider finger targets for Scale / Spacing controls; keep height unchanged. */
+    #scaleMinus,
+    #scalePlus,
+    #spacingMinus,
+    #spacingPlus {
+      width: 60px;
+      border-radius: 6px;
+    }
+
     .btn.selected {
       background: var(--butter);
       border-color: var(--gold);
@@ -877,6 +886,13 @@ gtag('config', 'G-YKGZCSRPSL');
       <!-- Keep slider in DOM for JS; hidden with CSS -->
       <div class="slider" aria-hidden="true"><input id="spacingSlider" type="range" min="10" max="120" value="32"></div>
     </div>
+
+    <!-- Double Length -->
+    <div class="group" data-role="double-length">
+      <div class="small">Double Length</div>
+      <button class="btn" id="doubleLengthOff" type="button">Off</button>
+      <button class="btn selected" id="doubleLengthOn" type="button">On</button>
+    </div>
   </div>
 
   <!-- ===== (Hidden) Transpose/Octave UI kept for JS ======= -->
@@ -1087,6 +1103,9 @@ gtag('config', 'G-YKGZCSRPSL');
       const scalePlus = document.getElementById('scalePlus');
       const spacingMinus = document.getElementById('spacingMinus');
       const spacingPlus = document.getElementById('spacingPlus');
+      const doubleLengthOff = document.getElementById('doubleLengthOff');
+      const doubleLengthOn = document.getElementById('doubleLengthOn');
+      let DOUBLE_LENGTH = true;
 
       // Transpose / Octave
       const tpMinus = document.getElementById('tpMinus');
@@ -2531,6 +2550,90 @@ gtag('config', 'G-YKGZCSRPSL');
         return lines.join('\n');
       }
 
+      // -------------------- Double Length transform --------------------
+      // When enabled, double the duration value of every **kern note/rest,
+      // convert common/cut time into explicit doubled meter, and remove
+      // pre-existing beam markers so doubled eighth notes become real quarters.
+      function doubleLengthKern(krnText) {
+        if (!krnText) return krnText;
+
+        const lines = krnText.split(/\r?\n/);
+        let kernColumns = new Set();
+        let headerFound = false;
+
+        for (const line of lines) {
+          if (!line.includes('\t')) continue;
+          const fields = line.split('\t');
+          if (fields.some(f => /^\*\*kern$/.test((f || '').trim()))) {
+            kernColumns = new Set(
+              fields.map((f, i) => /^\*\*kern$/.test((f || '').trim()) ? i : -1).filter(i => i >= 0)
+            );
+            headerFound = true;
+            break;
+          }
+        }
+
+        const doubleDuration = (token) => {
+          if (!token || token === '.') return token;
+          if (/^[*!=|]/.test(token)) return token;
+
+          const m = token.match(/^(\d+)(\.*)(.*)$/);
+          if (!m) return token;
+
+          let dur = Number(m[1]);
+          if (!Number.isFinite(dur) || dur <= 0) return token;
+
+          // Humdrum reciprocal duration: 1=whole, 2=half, 4=quarter, 8=eighth;
+          // 0 denotes a breve.
+          const doubled = dur === 1 ? '0' : String(dur * 0.5);
+          if (doubled.includes('.')) return token;
+          return doubled + m[2] + m[3].replace(/[LJ]/g, '');
+        };
+
+        return lines.map(line => {
+          if (!line.includes('\t')) {
+            // Header/interp lines without tabs may still contain a single meter token.
+            return line.replace(/\*met\(c\|\)/g, '*M2/2').replace(/\*met\(c\)/g, '*M4/2')
+                       .replace(/(\*M\d+)\/(1|2|4|8|16|32)/g, (all, num, den) => {
+                         const d = Number(den);
+                         if (d === 1) return num + '/0';
+                         return num + '/' + String(d / 2);
+                       });
+          }
+
+          const fields = line.split('\t');
+
+          // Double explicit or common-time meters on every spine.
+          for (let i = 0; i < fields.length; i++) {
+            const tok = (fields[i] || '').trim();
+            if (/^\*met\(c\|\)$/.test(tok)) fields[i] = '*M2/2';
+            else if (/^\*met\(c\)$/.test(tok)) fields[i] = '*M4/2';
+            else {
+              const mm = tok.match(/^\*M(\d+)\/(\d+)$/);
+              if (mm) {
+                const den = Number(mm[2]);
+                if (den === 1) fields[i] = `*M${mm[1]}/0`;
+                else if (den >= 2 && den % 2 === 0) fields[i] = `*M${mm[1]}/${den / 2}`;
+              }
+            }
+          }
+
+          if (headerFound) {
+            for (const i of kernColumns) fields[i] = doubleDuration(fields[i]);
+          }
+          return fields.join('\t');
+        }).join('\n');
+      }
+
+      function applyDoubleLengthIfNeeded(krnText) {
+        return DOUBLE_LENGTH ? doubleLengthKern(krnText) : krnText;
+      }
+
+      function updateDoubleLengthButtons() {
+        if (doubleLengthOn) doubleLengthOn.classList.toggle('selected', DOUBLE_LENGTH);
+        if (doubleLengthOff) doubleLengthOff.classList.toggle('selected', !DOUBLE_LENGTH);
+      }
+
       // -------------------- Pipeline --------------------
       function runPipelineForEntry(entry, tonic, m) {
         const originalAbsolute = entry.text;
@@ -2572,9 +2675,10 @@ gtag('config', 'G-YKGZCSRPSL');
           m
         );
 
-        // CHANGE #3: Save pre-placement and apply placement before rendering
+        // CHANGE #3: Save pre-placement and apply Double Length before rendering
         lastTransformedKrn = transformed;
-        currentKrn = applyFiguredBassPlacement(lastTransformedKrn, FB_ABOVE);
+        const doubleLengthKrn = applyDoubleLengthIfNeeded(lastTransformedKrn);
+        currentKrn = applyFiguredBassPlacement(doubleLengthKrn, FB_ABOVE);
 
         // Humdrum panel (kept same sections, but null-safe)
         humSet('');
@@ -2585,7 +2689,9 @@ gtag('config', 'G-YKGZCSRPSL');
         humAppend(`## TARGET KEY: ${formatKeyName(tonic, m)}\n\n`);
         humAppend('## 3) Transpose output (after figure-aware transform)\n\n');
         humAppend(lastTransformedKrn + '\n\n');
-        humAppend(`## 4) Historical mode status: Historical=${ACC_MODE === 'historic' ? 'TRUE' : 'FALSE'}\n`);
+        humAppend(`## 4) Double Length=${DOUBLE_LENGTH ? 'TRUE' : 'FALSE'}\n\n`);
+        humAppend(doubleLengthKrn + '\n\n');
+        humAppend(`## 5) Historical mode status: Historical=${ACC_MODE === 'historic' ? 'TRUE' : 'FALSE'}\n`);
 
         // Remember keys so toggles can act
         lastTargetTonic = tonic;
@@ -3218,6 +3324,22 @@ gtag('config', 'G-YKGZCSRPSL');
       if (spacingMinus) spacingMinus.addEventListener('click', () => { spacingSlider.value = Math.max(10, Number(spacingSlider.value) - 1); updateSpacingValueDisplay(); if (currentKrn) renderWithVerovio(currentKrn, lastTargetTonic); else renderWithVerovio(sample, ''); });
       if (spacingPlus) spacingPlus.addEventListener('click', () => { spacingSlider.value = Math.min(120, Number(spacingSlider.value) + 1); updateSpacingValueDisplay(); if (currentKrn) renderWithVerovio(currentKrn, lastTargetTonic); else renderWithVerovio(sample, ''); });
       if (spacingReset) spacingReset.addEventListener('click', () => { spacingSlider.value = 32; updateSpacingValueDisplay(); if (currentKrn) renderWithVerovio(currentKrn, lastTargetTonic); else renderWithVerovio(sample, ''); });
+
+      function rerenderForDoubleLengthToggle() {
+        const baseKrn = lastTransformedKrn || currentKrn || sample;
+        const doubled = applyDoubleLengthIfNeeded(baseKrn);
+        currentKrn = applyFiguredBassPlacement(doubled, FB_ABOVE);
+        updateDoubleLengthButtons();
+        humSet('');
+        humAppend(`## TARGET KEY: ${formatKeyName(lastTargetTonic, lastTargetMode)}\n\n`);
+        humAppend(`## Double Length=${DOUBLE_LENGTH ? 'TRUE' : 'FALSE'}\n\n`);
+        humAppend(doubled + '\n');
+        renderWithVerovio(currentKrn, lastTargetTonic || '');
+      }
+
+      if (doubleLengthOn) doubleLengthOn.addEventListener('click', () => { DOUBLE_LENGTH = true; rerenderForDoubleLengthToggle(); });
+      if (doubleLengthOff) doubleLengthOff.addEventListener('click', () => { DOUBLE_LENGTH = false; rerenderForDoubleLengthToggle(); });
+      updateDoubleLengthButtons();
 
 
       // Refit on viewport resize (phone rotation, split view, etc.)
